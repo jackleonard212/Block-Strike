@@ -185,9 +185,20 @@ setInterval(() => {
   }
 }, 50);
 
+server.on("error", err => {
+  if (err.code === "EADDRINUSE") console.error(`Port ${PORT} is already in use. The server is probably already running, or pick another port: PORT=3001 node server.js`);
+  else console.error(err.message);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log(`BLOCKSTRIKE server "${SERVER_NAME}" on port ${PORT}`);
   for (const list of Object.values(os.networkInterfaces()))
     for (const i of list) if (i.family === "IPv4" && !i.internal) console.log(`  LAN:   http://${i.address}:${PORT}`);
   console.log(`  local: http://localhost:${PORT}`);
+  if (process.env.OPEN === "1") {   // set by the start scripts: open the game in the default browser
+    const url = `http://localhost:${PORT}`;
+    const cmd = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+    require("child_process").exec(cmd, () => {});
+  }
 });

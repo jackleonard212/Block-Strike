@@ -1,0 +1,8 @@
+{
+  "name": "blockstrike",
+  "version": "1.0.0",
+  "description": "Blocky arena FPS with a tiny multiplayer server",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=14" },
+  "license": "MIT"
+}
