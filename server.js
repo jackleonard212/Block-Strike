@@ -114,7 +114,7 @@ function onMessage(conn, m) {
     const sp = pickSpawn(null);
     p = conn.player = {
       id, name, conn, color: COLORS[id % COLORS.length], x: sp[0], y: 0, z: sp[1],
-      yaw: 0, pitch: 0, w: 0, cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0,
+      yaw: 0, pitch: 0, w: 0, wk: "rifle", cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0,
     };
     send(p, {
       t: "welcome", id, name, spawn: sp, server: SERVER_NAME,
@@ -131,7 +131,7 @@ function onMessage(conn, m) {
   if (m.t === "st" && p.alive) {
     if ([m.x, m.y, m.z, m.yaw, m.pitch].every(Number.isFinite)) {
       p.x = m.x; p.y = m.y; p.z = m.z; p.yaw = m.yaw; p.pitch = m.pitch;
-      p.w = m.w | 0; p.cr = m.c ? 1 : 0;
+      p.w = m.w | 0; p.cr = m.c ? 1 : 0; p.wk = typeof m.k === "string" ? m.k.slice(0, 12) : "";
     }
   } else if (m.t === "shot" && p.alive) {
     broadcast({ t: "shot", id: p.id, f: m.f, e: m.e, w: m.w }, p);
@@ -180,7 +180,7 @@ setInterval(() => {
   if (players.size) {
     broadcast({
       t: "s",
-      p: [...players.values()].map(p => [p.id, r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), p.w, p.cr, p.alive ? 1 : 0]),
+      p: [...players.values()].map(p => [p.id, r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), p.w, p.cr, p.alive ? 1 : 0, p.wk]),
     });
   }
 }, 50);

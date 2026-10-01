@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <title>BLOCKSTRIKE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;user-select:none}
   html,body{width:100%;height:100%;overflow:hidden;background:#111;font-family:"Segoe UI",Arial,sans-serif;color:#fff}
@@ -40,22 +43,6 @@
   #feed{position:absolute;top:60px;right:16px;text-align:right;font-size:15px;font-weight:700;text-shadow:0 2px 3px #000}
   #feed div{margin-bottom:3px;background:rgba(0,0,0,.35);padding:2px 8px;border-radius:3px}
   #msg{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-size:34px;font-weight:900;text-shadow:0 3px 6px #000;opacity:0;transition:opacity .4s;color:#ff5555}
-  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
-    background:linear-gradient(135deg,rgba(10,10,30,.88),rgba(30,10,40,.9));z-index:5;overflow:auto}
-  #menu h1{font-size:84px;font-weight:900;letter-spacing:8px;background:linear-gradient(90deg,#38bdf8,#f472b6);-webkit-background-clip:text;color:transparent}
-  #menu p{margin-top:8px;font-size:20px;opacity:.85}
-  #menu .btn{cursor:pointer;margin-top:28px;padding:16px 56px;font-size:26px;font-weight:800;background:#f472b6;color:#111;border-radius:6px;letter-spacing:3px}
-  #menu table{margin-top:34px;border-collapse:collapse;font-size:15px;opacity:.9}
-  #menu td{padding:4px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
-  #menu td:first-child{color:#facc15;font-weight:700;text-align:right}
-  #menu .opts{margin-top:20px;font-size:15px;display:flex;gap:22px;align-items:center}
-  #menu select,#menu input{pointer-events:auto;font:inherit;padding:4px 8px;background:#1b1b2e;color:#fff;border:1px solid #556;border-radius:4px}
-  #menu input[type=range]{padding:0}
-  #menu #server{width:220px}
-  #menu #pname{width:110px}
-  #menu .opts{flex-wrap:wrap;justify-content:center;padding:0 16px}
-  #menu #note{text-align:center;padding:0 16px}
-  #menu #note.err{color:#ff7a7a}
   #minimap{position:absolute;left:16px;top:14px;width:176px;height:176px;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 0 18px rgba(56,189,248,.55),inset 0 0 20px rgba(0,0,0,.6);background:rgba(8,12,24,.55)}
   #lb{position:absolute;left:16px;top:204px;width:236px;background:rgba(0,0,0,.42);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-shadow:0 1px 2px #000}
   #lb h4{font-size:11px;letter-spacing:1.5px;opacity:.75;display:flex;justify-content:space-between;gap:10px;white-space:nowrap;margin-bottom:4px}
@@ -71,35 +58,95 @@
   .dn{position:absolute;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 3px #000;animation:dn .8s ease-out forwards;transform:translate(-50%,-50%)}
   .dn.h{color:#facc15;font-size:30px}
   @keyframes dn{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-60px}}
-  #rooms{width:min(660px,92vw);margin-top:14px;background:rgba(0,0,0,.35);border:1px solid rgba(244,114,182,.4);border-radius:8px;padding:10px 12px}
-  #rooms .srv-head{font-size:12px;letter-spacing:2px;opacity:.9;margin-bottom:8px}
-  #rooms .room-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
-  #rooms button{font:inherit;font-size:13px;font-weight:800;letter-spacing:1px;padding:7px 14px;background:#f472b6;color:#111;border:0;border-radius:4px;cursor:pointer}
-  #rooms button.alt{background:#2a2a44;color:#fff;border:1px solid #556;padding:5px 10px;font-size:12px}
-  #rooms button:disabled{opacity:.5;cursor:default}
-  #rooms #roomCode{width:120px;text-transform:uppercase;letter-spacing:5px;font-weight:800;text-align:center;font-size:18px}
-  #rooms .hint{font-size:12px;opacity:.7}
-  #hostInfo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:800}
-  #hostInfo .code{font-size:26px;letter-spacing:6px;color:#facc15}
-  #servers summary{cursor:pointer;font-size:12px;letter-spacing:2px;opacity:.85;margin-bottom:6px}
-  #servers{width:min(660px,92vw);margin-top:14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px}
-  #servers .srv-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:2px;opacity:.85;margin-bottom:6px}
-  #servers button{font:inherit;font-size:12px;font-weight:800;letter-spacing:1px;padding:4px 10px;background:#2a2a44;color:#fff;border:1px solid #556;border-radius:4px;cursor:pointer}
-  #servers button:hover{background:#3a3a60}
+  #menu{--panel:rgba(14,18,27,.82);--line:rgba(255,255,255,.1);--amber:#ffb020;--amber2:#ff7a18;--cyan:#3ee0ff;--ink:#e8edf5;--mute:#8d99ad;--good:#4ade80;--bad:#ff6b6b;
+    position:fixed;inset:0;z-index:5;display:flex;font-family:"Rajdhani","Segoe UI",Arial,sans-serif;color:var(--ink);
+    background:linear-gradient(100deg,rgba(6,8,13,.95) 0,rgba(6,8,13,.88) 32%,rgba(6,8,13,.58) 100%)}
+  #menu .rail{width:270px;flex:none;padding:28px 22px;display:flex;flex-direction:column;gap:26px;border-right:1px solid var(--line);background:linear-gradient(180deg,rgba(255,176,32,.07),transparent 40%)}
+  #menu .logo{font-size:44px;font-weight:700;letter-spacing:4px;line-height:.9;text-transform:uppercase}
+  #menu .logo span{display:block}
+  #menu .logo .a{color:var(--amber);font-size:50px;letter-spacing:7px;text-shadow:0 0 22px rgba(255,176,32,.45)}
+  #menu .logo small{display:block;margin-top:8px;font-size:12px;letter-spacing:4px;color:var(--mute);font-weight:600}
+  #menu nav{display:flex;flex-direction:column;gap:6px}
+  #menu .nav{font:inherit;font-size:20px;font-weight:700;letter-spacing:3px;text-align:left;padding:12px 16px;color:var(--mute);background:transparent;border:0;border-left:3px solid transparent;cursor:pointer;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%)}
+  #menu .nav:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+  #menu .nav.on{color:#10131a;background:linear-gradient(90deg,var(--amber),var(--amber2));border-left-color:#fff}
+  #menu .wallet{margin-top:auto;padding:14px 16px;border:1px solid var(--line);background:rgba(255,255,255,.03);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%)}
+  #menu .wallet .lbl{font-size:12px;letter-spacing:3px;color:var(--mute)}
+  #menu .wallet .amt{display:flex;align-items:center;gap:10px;font-size:38px;font-weight:700;color:var(--amber)}
+  #menu .coin{display:inline-block;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#ffb020 55%,#c77700);box-shadow:0 0 10px rgba(255,176,32,.6)}
+  #menu .wallet .earn{margin-top:6px;font-size:13px;line-height:1.3;color:var(--mute)}
+  #menu .stage{flex:1;min-width:0;overflow:auto;padding:30px 36px}
+  #menu .tab{display:none;max-width:1020px}
+  #menu .tab.on{display:block}
+  #menu .h2{font-size:14px;letter-spacing:4px;color:var(--mute);font-weight:700;margin-bottom:12px;text-transform:uppercase}
+  #menu #note{font-size:20px;font-weight:600;margin-bottom:18px;line-height:1.25}
+  #menu #note.err{color:var(--bad)}
+  #menu .seg{display:inline-flex;border:1px solid var(--line);margin-bottom:20px}
+  #menu .seg button{font:inherit;font-size:20px;font-weight:700;letter-spacing:3px;padding:12px 36px;color:var(--mute);background:rgba(255,255,255,.03);border:0;cursor:pointer}
+  #menu .seg button.on{color:#10131a;background:var(--amber)}
+  #menu .card{background:var(--panel);border:1px solid var(--line);padding:16px 18px;margin-bottom:16px;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%)}
+  #menu .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  #menu .row label{display:flex;flex-direction:column;gap:6px;font-size:13px;letter-spacing:2px;color:var(--mute);font-weight:700}
+  #menu select,#menu input{font:inherit;font-size:17px;font-weight:600;padding:8px 12px;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);outline:0;border-radius:0}
+  #menu select option{background:#10131a}
+  #menu input:focus,#menu select:focus{border-color:var(--amber)}
+  #menu input[type=range]{padding:0;width:220px;accent-color:var(--amber)}
+  #menu .btn{display:inline-block;cursor:pointer;font-size:30px;font-weight:700;letter-spacing:6px;color:#10131a;padding:14px 64px;background:linear-gradient(90deg,var(--amber),var(--amber2));clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);margin-top:6px}
+  #menu .btn:hover{filter:brightness(1.12)}
+  #menu .loadout-line{margin-top:12px;font-size:14px;letter-spacing:2px;color:var(--mute)}
+  #menu .keys{border-collapse:collapse;font-size:17px}
+  #menu .keys td{padding:6px 18px 6px 0;border-bottom:1px solid var(--line)}
+  #menu .keys td:nth-child(odd){color:var(--amber);font-weight:700;text-align:right;padding-right:12px;white-space:nowrap}
+  #menu .hint{font-size:13px;color:var(--mute)}
+  #menu button.small{font:inherit;font-size:14px;font-weight:700;letter-spacing:2px;padding:8px 16px;color:#10131a;background:var(--amber);border:0;cursor:pointer}
+  #menu button.small.alt{color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);padding:6px 12px;font-size:13px}
+  #menu button.small:disabled{opacity:.45;cursor:default}
+  #rooms .row{margin-top:10px}
+  #roomCode{width:130px;text-transform:uppercase;letter-spacing:6px;font-weight:700;text-align:center;font-size:22px}
+  #hostInfo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700}
+  #hostInfo .code{font-size:30px;letter-spacing:7px;color:var(--amber)}
+  #servers summary{cursor:pointer;font-size:13px;letter-spacing:3px;color:var(--mute);font-weight:700}
+  #servers[open] summary{margin-bottom:10px}
+  #servers .srv-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:3px;color:var(--mute);margin:8px 0 6px}
   #srvList{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:4px}
-  .srv{display:grid;grid-template-columns:1.2fr 1.4fr auto 22px;gap:10px;align-items:center;padding:6px 8px;border-radius:5px;cursor:pointer;background:rgba(255,255,255,.04);font-size:14px;font-weight:700}
+  .srv{display:grid;grid-template-columns:1.2fr 1.4fr auto 22px;gap:10px;align-items:center;padding:7px 10px;cursor:pointer;background:rgba(255,255,255,.04);font-size:16px;font-weight:600}
   .srv:hover{background:rgba(255,255,255,.1)}
-  .srv.sel{outline:2px solid #f472b6;background:rgba(244,114,182,.12)}
+  .srv.sel{outline:2px solid var(--amber)}
   .srv span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .srv .a{opacity:.55;font-weight:500;font-size:12px}
-  .srv .st{font-size:12px;min-width:96px;text-align:right}
-  .srv .st.ok{color:#4ade80}
-  .srv .st.off{color:#ff7a7a}
-  .srv .x{opacity:.5;text-align:center}
-  .srv .x:hover{opacity:1;color:#ff7a7a}
-  #srvHint{font-size:12px;opacity:.8;margin-top:6px;color:#ffb066}
+  .srv .a{color:var(--mute);font-weight:500;font-size:13px}
+  .srv .st{font-size:14px;min-width:96px;text-align:right}
+  .srv .st.ok{color:var(--good)}
+  .srv .st.off{color:var(--bad)}
+  .srv .x{color:var(--mute);text-align:center}
+  .srv .x:hover{color:var(--bad)}
+  #srvHint{font-size:13px;margin-top:6px;color:var(--amber)}
   #servers .srv-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-  #servers .srv-add input{flex:1 1 120px;min-width:0}
+  #servers .srv-add input{flex:1 1 120px;min-width:0;font-size:15px;padding:6px 10px}
+  #menu .slots{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  #menu .slots button{font:inherit;font-size:16px;font-weight:700;letter-spacing:3px;padding:8px 20px;color:var(--mute);background:rgba(255,255,255,.04);border:1px solid var(--line);cursor:pointer}
+  #menu .slots button.on{color:#10131a;background:var(--amber);border-color:var(--amber)}
+  #menu .arm{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:22px;align-items:start}
+  #menu .wcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;align-content:start}
+  #menu .wc{cursor:pointer;border:1px solid var(--line);padding:12px 14px;background:rgba(255,255,255,.03)}
+  #menu .wc:hover{background:rgba(255,255,255,.07)}
+  #menu .wc.sel{border-color:var(--amber);background:rgba(255,176,32,.09)}
+  #menu .wc .n{font-size:22px;font-weight:700;letter-spacing:2px}
+  #menu .wc .t{font-size:12px;letter-spacing:2px;color:var(--mute);margin-bottom:6px}
+  #menu .stat{display:grid;grid-template-columns:68px 1fr;align-items:center;gap:8px;font-size:11px;letter-spacing:2px;color:var(--mute);margin-top:4px}
+  #menu .bar{height:5px;background:rgba(255,255,255,.1)}
+  #menu .bar i{display:block;height:100%;background:var(--cyan)}
+  #menu .wc .st2{margin-top:8px;font-size:14px;font-weight:700;letter-spacing:2px}
+  #menu .own{color:var(--good)}
+  #menu .price{color:var(--amber)}
+  #menu #preview{height:250px;border:1px solid var(--line);background:linear-gradient(180deg,#121826,#0a0d14);position:relative;overflow:hidden}
+  #menu #preview canvas{display:block;width:100%;height:100%}
+  #menu #preview .cap{position:absolute;left:12px;top:10px;font-size:12px;letter-spacing:3px;color:var(--mute);z-index:1}
+  #menu .sights{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  #menu .chip{font:inherit;font-size:15px;font-weight:700;letter-spacing:2px;padding:8px 12px;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);cursor:pointer;text-align:left}
+  #menu .chip small{display:block;font-size:12px;letter-spacing:2px;font-weight:600;margin-top:2px}
+  #menu .chip.on{border-color:var(--amber);background:rgba(255,176,32,.12)}
+  #menu .chip:disabled{opacity:.5;cursor:default}
+  .dn.coinpop{color:#ffb020;font-size:22px}
   #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
   #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
@@ -124,7 +171,7 @@
   <div id="dn"></div>
   <div id="fps"></div>
   <div id="banner"></div>
-  <div id="score"><span>KILLS <b id="kills">0</b></span><span>DEATHS <b id="deaths">0</b></span><span>⏱ <b id="time">0:00</b></span></div>
+  <div id="score"><span>KILLS <b id="kills">0</b></span><span>DEATHS <b id="deaths">0</b></span><span>COINS <b id="coinHud">0</b></span><span>⏱ <b id="time">0:00</b></span></div>
   <div id="feed"></div>
   <div id="msg"></div>
   <div id="board"></div>
@@ -133,64 +180,113 @@
 </div>
 
 <div id="menu">
-  <h1>BLOCKSTRIKE</h1>
-  <p id="note">Fast, blocky arena FPS. Play solo against bots, or host a room and share the code.</p>
-  <div class="opts">
-    <label>Mode
-      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer</option></select>
-    </label>
-    <label class="solo-only">Bots
-      <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
-    </label>
-    <label class="solo-only">Difficulty
-      <select id="diff"><option value="0.6">Easy</option><option value="1" selected>Normal</option><option value="1.5">Hard</option></select>
-    </label>
-    <label class="mp-only">Name
-      <input id="pname" maxlength="12" value="Player">
-    </label>
-    <label>Sensitivity
-      <input id="sens" type="range" min="0.3" max="3" step="0.1" value="1">
-    </label>
-    <label>FOV
-      <input id="fov" type="range" min="70" max="110" step="1" value="85">
-    </label>
-  </div>
-  <div id="rooms" class="mp-only">
-    <div class="srv-head">PLAY WITH FRIENDS · NO INSTALL NEEDED</div>
-    <div class="room-row">
-      <button id="hostBtn" type="button">HOST A ROOM</button>
-      <div id="hostInfo"></div>
-      <span class="hint">You host in your browser. Friends join with your code.</span>
+  <aside class="rail">
+    <div class="logo"><span>BLOCK</span><span class="a">STRIKE</span><small>ARENA FPS</small></div>
+    <nav>
+      <button class="nav on" type="button" data-tab="play">PLAY</button>
+      <button class="nav" type="button" data-tab="armory">ARMORY</button>
+      <button class="nav" type="button" data-tab="settings">SETTINGS</button>
+    </nav>
+    <div class="wallet">
+      <div class="lbl">COINS</div>
+      <div class="amt"><i class="coin"></i><b id="coins">0</b></div>
+      <div class="earn">Kill +10 · headshot or backstab +5 · match win +50. Spend them in the Armory.</div>
     </div>
-    <div class="room-row">
-      <input id="roomCode" placeholder="CODE" maxlength="5" autocomplete="off" spellcheck="false">
-      <span class="hint">Got a friend's room code? Type it here, then press PLAY ONLINE.</span>
-    </div>
-  </div>
-  <details id="servers" class="mp-only">
-    <summary>ADVANCED · DEDICATED SERVERS</summary>
-    <label style="display:block;margin-bottom:8px;font-size:13px">Selected server
-      <input id="server" value="ws://localhost:3000" spellcheck="false" style="width:260px">
-    </label>
-    <div class="srv-head"><span>SERVERS</span><button id="srvRefresh" type="button">REFRESH</button></div>
-    <div id="srvList"></div>
-    <div id="srvHint"></div>
-    <div class="srv-add">
-      <input id="srvName" placeholder="Name" maxlength="32" autocomplete="off">
-      <input id="srvAddr" placeholder="ws://host:3000 or wss://host" spellcheck="false" autocomplete="off">
-      <button id="srvAdd" type="button">ADD</button>
-    </div>
-  </details>
-  <div class="btn" id="play">CLICK TO PLAY</div>
-  <table>
-    <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
-    <tr><td>Space</td><td>Jump (hold to bunny-hop)</td><td>C / Ctrl</td><td>Crouch / slide</td></tr>
-    <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
-    <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
-    <tr><td>Tab</td><td>Scoreboard (multiplayer)</td><td>Esc</td><td>Pause / leave match</td></tr>
-    <tr><td>Q</td><td>Dash</td><td>4 / V</td><td>Knife (melee, backstab = big damage)</td></tr>
-    <tr><td>Cyan pads</td><td>Launch you sky-high</td><td>Pickups</td><td>Green HP, yellow ammo (solo)</td></tr>
-  </table>
+  </aside>
+  <main class="stage">
+    <section id="tab-play" class="tab on">
+      <p id="note">Fast, blocky arena FPS. Play solo against bots, or host a room and share the code.</p>
+      <div class="seg"><button type="button" class="on" data-mode="solo">SOLO</button><button type="button" data-mode="mp">ONLINE</button></div>
+      <select id="mode" hidden><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer</option></select>
+      <div class="card solo-only">
+        <div class="h2">Match settings</div>
+        <div class="row">
+          <label>BOTS
+            <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
+          </label>
+          <label>DIFFICULTY
+            <select id="diff"><option value="0.6">Easy</option><option value="1" selected>Normal</option><option value="1.5">Hard</option></select>
+          </label>
+        </div>
+      </div>
+      <div id="rooms" class="card mp-only">
+        <div class="h2">Play with friends · nothing to install</div>
+        <div class="row">
+          <button id="hostBtn" class="small" type="button">HOST A ROOM</button>
+          <div id="hostInfo"></div>
+          <span class="hint">You host in your browser. Friends join with your code.</span>
+        </div>
+        <div class="row">
+          <input id="roomCode" placeholder="CODE" maxlength="5" autocomplete="off" spellcheck="false">
+          <span class="hint">Got a friend's code? Type it here, then press PLAY ONLINE.</span>
+        </div>
+      </div>
+      <details id="servers" class="card mp-only">
+        <summary>ADVANCED · DEDICATED SERVERS</summary>
+        <label style="display:block;margin-bottom:8px;font-size:13px;letter-spacing:2px;color:var(--mute)">SELECTED SERVER<br>
+          <input id="server" value="ws://localhost:3000" spellcheck="false" style="width:280px;margin-top:6px">
+        </label>
+        <div class="srv-head"><span>SERVERS</span><button id="srvRefresh" class="small alt" type="button">REFRESH</button></div>
+        <div id="srvList"></div>
+        <div id="srvHint"></div>
+        <div class="srv-add">
+          <input id="srvName" placeholder="Name" maxlength="32" autocomplete="off">
+          <input id="srvAddr" placeholder="ws://host:3000 or wss://host" spellcheck="false" autocomplete="off">
+          <button id="srvAdd" class="small alt" type="button">ADD</button>
+        </div>
+      </details>
+      <div class="btn" id="play">PLAY SOLO</div>
+      <div class="loadout-line" id="loadoutLine"></div>
+    </section>
+
+    <section id="tab-armory" class="tab">
+      <div class="h2">Armory · spend coins on weapons and sights</div>
+      <div class="slots" id="slotTabs"></div>
+      <div class="arm">
+        <div class="wcards" id="wcards"></div>
+        <div>
+          <div id="preview"><span class="cap" id="prevCap"></span></div>
+          <div class="card" style="margin-top:12px">
+            <div class="h2" id="prevName" style="color:var(--ink);font-size:22px;margin-bottom:4px"></div>
+            <div class="hint" id="prevDesc" style="margin-bottom:10px"></div>
+            <div id="prevAction"></div>
+          </div>
+          <div class="h2" style="margin-top:6px">Sights</div>
+          <div class="sights" id="sightChips"></div>
+          <div class="hint" id="sightHint" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab">
+      <div class="card">
+        <div class="h2">Player</div>
+        <div class="row">
+          <label>NAME
+            <input id="pname" maxlength="12" value="Player">
+          </label>
+          <label>SENSITIVITY
+            <input id="sens" type="range" min="0.3" max="3" step="0.1" value="1">
+          </label>
+          <label>FIELD OF VIEW
+            <input id="fov" type="range" min="70" max="110" step="1" value="85">
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h2">Controls</div>
+        <table class="keys">
+          <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
+          <tr><td>Space</td><td>Jump (hold to bunny-hop)</td><td>C / Ctrl</td><td>Crouch / slide</td></tr>
+          <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
+          <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
+          <tr><td>Tab</td><td>Scoreboard</td><td>Esc</td><td>Pause / leave match</td></tr>
+          <tr><td>Q</td><td>Dash</td><td>4 / V</td><td>Knife (backstab = big damage)</td></tr>
+          <tr><td>Cyan pads</td><td>Launch you sky-high</td><td>Pickups</td><td>Green HP, yellow ammo (solo)</td></tr>
+        </table>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -235,6 +331,7 @@ const sfx = {
   rifle: () => { noise(0.12, 0.35, 2500); tone(140, 0.08, 0.2, "sawtooth", -90); },
   shotgun: () => { noise(0.3, 0.7, 1400); tone(80, 0.2, 0.4, "sawtooth", -50); },
   sniper: () => { noise(0.5, 0.8, 1800); tone(60, 0.4, 0.5, "sawtooth", -40); },
+  pistol: () => { noise(0.1, 0.3, 2800); tone(200, 0.07, 0.2, "square", -120); },
   hit: () => tone(1100, 0.06, 0.15, "square"),
   head: () => { tone(1700, 0.09, 0.2, "square"); tone(2200, 0.09, 0.12, "square"); },
   kill: () => { tone(500, 0.15, 0.2, "triangle", 500); },
@@ -519,16 +616,50 @@ function moveEntity(e, dt, r, h) {
   return hitWall;
 }
 
-// ---------------------------------------------------------------- weapons
-const WEAPONS = [
-  { name: "ASSAULT RIFLE", key: "rifle", dmg: 22, rate: 0.085, mag: 30, reserve: 120, reload: 1.6,
-    spread: 0.012, adsSpread: 0.003, pellets: 1, auto: true, recoil: 0.012, range: 200, adsFov: 62, color: 0x222831 },
-  { name: "SHOTGUN", key: "shotgun", dmg: 14, rate: 0.85, mag: 6, reserve: 30, reload: 2.2,
-    spread: 0.065, adsSpread: 0.045, pellets: 9, auto: false, recoil: 0.07, range: 40, adsFov: 70, color: 0x5a3b22 },
-  { name: "SNIPER", key: "sniper", dmg: 100, rate: 1.1, mag: 5, reserve: 20, reload: 2.4,
-    spread: 0.04, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.09, range: 400, adsFov: 20, color: 0x1b2a1b, scope: true },
-  { name: "KNIFE", key: "knife", melee: true, dmg: 55, backstab: 120, rate: 0.5, range: 2.8, mag: 0, reserve: 0, reload: 0, adsFov: 80, color: 0xcfd8e3 },
-];
+// ---------------------------------------------------------------- weapon catalog, saved loadout and coins
+const SLOT_NAMES = ["PRIMARY", "SECONDARY", "SNIPER", "MELEE"];
+const CATALOG = {
+  rifle:    { name: "ASSAULT RIFLE", cls: "Rifle", slot: 0, price: 0, dmg: 22, rate: 0.085, mag: 30, reserve: 120, reload: 1.6, spread: 0.012, adsSpread: 0.003, pellets: 1, auto: true, recoil: 0.012, range: 200, adsFov: 62, sight: true, eject: 0, desc: "Balanced and accurate. Good at every range." },
+  smg:      { name: "SMG", cls: "Submachine gun", slot: 0, price: 300, dmg: 15, rate: 0.06, mag: 35, reserve: 140, reload: 1.4, spread: 0.02, adsSpread: 0.006, pellets: 1, auto: true, recoil: 0.008, range: 120, adsFov: 66, sight: true, eject: 0, sfx: "rifle", desc: "Huge fire rate for close fights, with very little recoil." },
+  lmg:      { name: "LMG", cls: "Light machine gun", slot: 0, price: 750, dmg: 24, rate: 0.1, mag: 60, reserve: 180, reload: 3.4, spread: 0.022, adsSpread: 0.007, pellets: 1, auto: true, recoil: 0.016, range: 200, adsFov: 64, sight: true, eject: 0, sfx: "rifle", desc: "Sixty rounds of heavy fire. Slow to reload." },
+  shotgun:  { name: "SHOTGUN", cls: "Pump shotgun", slot: 1, price: 0, dmg: 14, rate: 0.85, mag: 6, reserve: 30, reload: 2.2, spread: 0.065, adsSpread: 0.045, pellets: 9, auto: false, recoil: 0.07, range: 40, adsFov: 70, falloff: true, eject: 320, desc: "Devastating up close, weak at range." },
+  pistol:   { name: "PISTOL", cls: "Pistol", slot: 1, price: 100, dmg: 24, rate: 0.2, mag: 12, reserve: 72, reload: 1.2, spread: 0.014, adsSpread: 0.004, pellets: 1, auto: false, recoil: 0.03, range: 120, adsFov: 68, sight: true, eject: 0, desc: "Quick to reload. A reliable backup." },
+  revolver: { name: "REVOLVER", cls: "Revolver", slot: 1, price: 450, dmg: 62, rate: 0.55, mag: 6, reserve: 36, reload: 2.1, spread: 0.01, adsSpread: 0.002, pellets: 1, auto: false, recoil: 0.08, range: 160, adsFov: 66, eject: -1, sfx: "sniper", desc: "Hits hard. Two shots to the body." },
+  autoshot: { name: "AUTO SHOTGUN", cls: "Auto shotgun", slot: 1, price: 800, dmg: 9, rate: 0.26, mag: 8, reserve: 48, reload: 2.8, spread: 0.07, adsSpread: 0.05, pellets: 8, auto: true, recoil: 0.04, range: 35, adsFov: 70, falloff: true, eject: 150, sfx: "shotgun", desc: "Full-auto close-range chaos." },
+  sniper:   { name: "SNIPER", cls: "Bolt-action sniper", slot: 2, price: 0, dmg: 100, rate: 1.1, mag: 5, reserve: 20, reload: 2.4, spread: 0.04, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.09, range: 400, adsFov: 20, scope: true, eject: 550, desc: "One shot, one kill. Scope in for the full effect." },
+  marksman: { name: "MARKSMAN", cls: "Semi-auto rifle", slot: 2, price: 650, dmg: 48, rate: 0.28, mag: 10, reserve: 50, reload: 2.2, spread: 0.014, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.04, range: 320, adsFov: 30, eject: 100, sfx: "sniper", desc: "Fast follow-up shots through a built-in 4x scope." },
+  knife:    { name: "KNIFE", cls: "Melee", slot: 3, price: 0, melee: true, dmg: 55, backstab: 120, rate: 0.5, range: 2.8, mag: 0, reserve: 0, reload: 0, adsFov: 80, desc: "Quiet and fast. Hit someone from behind for 120." },
+};
+Object.keys(CATALOG).forEach(k => { CATALOG[k].key = k; });
+const SIGHTS = {
+  iron:   { name: "IRON SIGHTS", price: 0 },
+  reddot: { name: "RED DOT", price: 150 },
+  holo:   { name: "HOLOGRAPHIC", price: 250 },
+  acog:   { name: "4X SCOPE", price: 450, fov: 36 },
+};
+const DEFAULT_SAVE = () => ({ coins: 200, owned: ["rifle", "shotgun", "sniper", "knife"], sights: ["iron", "reddot"], slots: ["rifle", "shotgun", "sniper", "knife"], sightOn: { rifle: "reddot" } });
+let save = DEFAULT_SAVE();
+try {
+  const raw = JSON.parse(localStorage.getItem("bs_save") || "null");
+  if (raw && typeof raw === "object") {
+    if (Number.isFinite(raw.coins) && raw.coins >= 0) save.coins = Math.floor(raw.coins);
+    if (Array.isArray(raw.owned)) save.owned = [...new Set(save.owned.concat(raw.owned.filter(k => CATALOG[k])))];
+    if (Array.isArray(raw.sights)) save.sights = [...new Set(save.sights.concat(raw.sights.filter(k => SIGHTS[k])))];
+    if (Array.isArray(raw.slots)) raw.slots.slice(0, 4).forEach((k, i) => { if (CATALOG[k] && CATALOG[k].slot === i && save.owned.includes(k)) save.slots[i] = k; });
+    if (raw.sightOn && typeof raw.sightOn === "object") for (const k in raw.sightOn) if (CATALOG[k] && CATALOG[k].sight && save.sights.includes(raw.sightOn[k])) save.sightOn[k] = raw.sightOn[k];
+  }
+} catch (e) { /* no saved game or storage unavailable */ }
+function saveGame() { try { localStorage.setItem("bs_save", JSON.stringify(save)); } catch (e) { /* ignore */ } }
+function weaponDef(key) {   // catalog entry plus the sight you picked for it
+  const d = Object.assign({}, CATALOG[key]);
+  if (d.sight) {
+    const id = save.sights.includes(save.sightOn[key]) ? save.sightOn[key] : "iron";
+    d.sightId = id;
+    if (SIGHTS[id].fov) d.adsFov = SIGHTS[id].fov;
+  }
+  return d;
+}
+const WEAPONS = save.slots.map(weaponDef);
 
 // ---------------------------------------------------------------- gun models (shared by first person and other players)
 // gun-local space: +z toward the shooter, -z toward the muzzle, origin near the receiver
@@ -551,7 +682,51 @@ function limb(parent, a, b, thick, color) {
   parent.add(m);
   return m;
 }
-function buildGun(key) {
+// where optics sit on each gun and how high the iron-sight aim line is
+const MOUNT = {
+  rifle:  { rail: 0.065, z: 0.03, front: -0.5, iron: 0.065 },
+  smg:    { rail: 0.056, z: 0.01, front: -0.36, iron: 0.06 },
+  lmg:    { rail: 0.07, z: 0.0, front: -0.62, iron: 0.077 },
+  pistol: { rail: 0.05, z: 0.05, front: -0.11, iron: 0.062 },
+};
+// returns the height of the aim point, so aiming down sights can line it up with the screen centre
+function addSight(g, key, sight) {
+  const m = MOUNT[key], DARK = 0x15171a;
+  if (sight === "reddot") {
+    gunBox(g, 0.045, 0.022, 0.06, 0, m.rail + 0.011, m.z, DARK);
+    gunBox(g, 0.006, 0.034, 0.06, -0.02, m.rail + 0.039, m.z, DARK);
+    gunBox(g, 0.006, 0.034, 0.06, 0.02, m.rail + 0.039, m.z, DARK);
+    gunBox(g, 0.046, 0.006, 0.06, 0, m.rail + 0.059, m.z, DARK);
+    const y = m.rail + 0.04;
+    gunBox(g, 0.005, 0.005, 0.004, 0, y, m.z - 0.02, 0xff2a2a, { basic: true });   // the dot
+    return y;
+  }
+  if (sight === "holo") {
+    gunBox(g, 0.05, 0.022, 0.07, 0, m.rail + 0.011, m.z, DARK);
+    gunBox(g, 0.006, 0.046, 0.07, -0.022, m.rail + 0.045, m.z, DARK);
+    gunBox(g, 0.006, 0.046, 0.07, 0.022, m.rail + 0.045, m.z, DARK);
+    gunBox(g, 0.05, 0.006, 0.07, 0, m.rail + 0.071, m.z, DARK);
+    const y = m.rail + 0.046;
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; gunBox(g, 0.004, 0.004, 0.003, Math.cos(a) * 0.012, y + Math.sin(a) * 0.012, m.z - 0.025, 0x4af0ff, { basic: true }); }
+    gunBox(g, 0.004, 0.004, 0.003, 0, y, m.z - 0.025, 0x4af0ff, { basic: true });
+    return y;
+  }
+  if (sight === "acog") {
+    gunBox(g, 0.03, 0.03, 0.05, 0, m.rail + 0.012, m.z, DARK);                          // mount
+    gunBox(g, 0.04, 0.05, 0.15, 0, m.rail + 0.04, m.z, 0x1a1c20);                       // body
+    gunBox(g, 0.05, 0.05, 0.04, 0, m.rail + 0.04, m.z - 0.09, 0x111214);                // objective
+    gunBox(g, 0.046, 0.046, 0.04, 0, m.rail + 0.04, m.z + 0.095, 0x111214);             // eyepiece
+    gunBox(g, 0.036, 0.036, 0.004, 0, m.rail + 0.04, m.z - 0.112, 0x3aa0ff, { basic: true });   // lens
+    gunBox(g, 0.004, 0.004, 0.004, 0, m.rail + 0.04, m.z + 0.075, 0xffb020, { basic: true });   // reticle
+    return m.rail + 0.04;
+  }
+  // iron sights: rear posts and a front post sit on one line
+  gunBox(g, 0.008, 0.03, 0.012, -0.016, m.iron, m.z + 0.04, DARK);
+  gunBox(g, 0.008, 0.03, 0.012, 0.016, m.iron, m.z + 0.04, DARK);
+  gunBox(g, 0.006, 0.036, 0.008, 0, m.iron - 0.018, m.front, DARK);
+  return m.iron;
+}
+function buildGun(key, sightId) {
   const g = new THREE.Group();
   const STEEL = 0x15171a, GUNMETAL = 0x2b2f36, WOOD = 0x6b4423, POLY = 0x23262b;
   let muzzle = [0, 0.012, -0.6], sightY = 0.1;
@@ -561,16 +736,51 @@ function buildGun(key) {
     gunBox(g, 0.07, 0.07, 0.24, 0, -0.005, -0.23, 0x4b3a2a);             // handguard
     gunBox(g, 0.028, 0.028, 0.2, 0, 0.012, -0.45, STEEL);                // barrel
     gunBox(g, 0.042, 0.042, 0.05, 0, 0.012, -0.57, 0x0f1012);            // muzzle brake
-    gunBox(g, 0.012, 0.04, 0.012, 0, 0.045, -0.5, 0x0f1012);             // front sight
     gunBox(g, 0.045, 0.16, 0.07, 0, -0.125, -0.03, POLY, { rx: 0.25 });  // magazine
     gunBox(g, 0.05, 0.11, 0.06, 0, -0.1, 0.11, 0x1b1d21, { rx: -0.35 }); // grip
     gunBox(g, 0.05, 0.08, 0.22, 0, -0.01, 0.24, 0x4b3a2a);               // stock
-    gunBox(g, 0.05, 0.03, 0.08, 0, 0.082, 0.03, STEEL);                  // red dot base
-    gunBox(g, 0.008, 0.045, 0.07, -0.022, 0.11, 0.03, STEEL);            // red dot frame
-    gunBox(g, 0.008, 0.045, 0.07, 0.022, 0.11, 0.03, STEEL);
-    gunBox(g, 0.05, 0.01, 0.07, 0, 0.135, 0.03, STEEL);
-    gunBox(g, 0.009, 0.009, 0.004, 0, 0.108, 0.0, 0xff2a2a, { basic: true });   // the dot
-    muzzle = [0, 0.012, -0.62]; sightY = 0.108;
+    muzzle = [0, 0.012, -0.62];
+  } else if (key === "smg") {
+    gunBox(g, 0.055, 0.08, 0.22, 0, 0, 0, GUNMETAL);
+    gunBox(g, 0.045, 0.016, 0.2, 0, 0.048, 0, 0x1f2328);
+    gunBox(g, 0.06, 0.06, 0.14, 0, -0.005, -0.17, 0x3a3f47);
+    gunBox(g, 0.026, 0.026, 0.1, 0, 0.01, -0.3, STEEL);
+    gunBox(g, 0.04, 0.04, 0.14, 0, 0.01, -0.4, 0x1a1a1a);                // suppressor
+    gunBox(g, 0.035, 0.17, 0.05, 0, -0.12, -0.02, POLY);                 // straight magazine
+    gunBox(g, 0.045, 0.1, 0.055, 0, -0.09, 0.09, 0x1b1d21, { rx: -0.3 });
+    gunBox(g, 0.025, 0.03, 0.16, 0, 0.0, 0.19, STEEL);                   // wire stock
+    gunBox(g, 0.04, 0.07, 0.02, 0, -0.01, 0.275, STEEL);
+    muzzle = [0, 0.01, -0.49];
+  } else if (key === "lmg") {
+    gunBox(g, 0.07, 0.1, 0.3, 0, 0, 0, GUNMETAL);
+    gunBox(g, 0.05, 0.02, 0.28, 0, 0.06, 0, 0x1f2328);
+    gunBox(g, 0.08, 0.08, 0.26, 0, 0, -0.28, 0x3a3f47);                  // heat shield
+    gunBox(g, 0.032, 0.032, 0.24, 0, 0.015, -0.55, STEEL);
+    gunBox(g, 0.045, 0.045, 0.05, 0, 0.015, -0.7, 0x0f1012);
+    gunBox(g, 0.1, 0.12, 0.14, 0, -0.11, 0.0, 0x2d4a2d);                 // ammo box
+    gunBox(g, 0.01, 0.01, 0.12, -0.03, -0.07, -0.5, STEEL);              // folded bipod
+    gunBox(g, 0.01, 0.01, 0.12, 0.03, -0.07, -0.5, STEEL);
+    gunBox(g, 0.05, 0.11, 0.06, 0, -0.11, 0.14, 0x1b1d21, { rx: -0.3 });
+    gunBox(g, 0.06, 0.1, 0.26, 0, -0.01, 0.3, 0x2a2d33);
+    muzzle = [0, 0.015, -0.73];
+  } else if (key === "pistol") {
+    gunBox(g, 0.03, 0.04, 0.16, 0, 0.0, 0.0, 0x1b1d21);                  // frame
+    gunBox(g, 0.034, 0.04, 0.2, 0, 0.03, -0.02, GUNMETAL);               // slide
+    gunBox(g, 0.016, 0.016, 0.03, 0, 0.03, -0.135, STEEL);               // barrel tip
+    gunBox(g, 0.036, 0.1, 0.05, 0, -0.07, 0.06, POLY, { rx: -0.25 });    // grip
+    gunBox(g, 0.02, 0.03, 0.07, 0, -0.03, 0.0, 0x1b1d21);                // trigger guard
+    muzzle = [0, 0.03, -0.15];
+  } else if (key === "revolver") {
+    const STEELY = 0x8a8f99;
+    gunBox(g, 0.035, 0.055, 0.12, 0, 0, 0.03, STEELY);                   // frame
+    gunBox(g, 0.03, 0.034, 0.26, 0, 0.025, -0.17, STEELY);               // barrel
+    gunBox(g, 0.014, 0.01, 0.26, 0, 0.047, -0.17, 0x6b7079);             // rib
+    gunBox(g, 0.05, 0.055, 0.07, 0, 0.008, -0.02, 0x7a7f89);             // cylinder
+    gunBox(g, 0.038, 0.11, 0.055, 0, -0.075, 0.1, WOOD, { rx: -0.3 });   // grip
+    gunBox(g, 0.012, 0.025, 0.02, 0, 0.045, 0.095, STEEL);               // hammer
+    gunBox(g, 0.008, 0.02, 0.008, 0, 0.058, -0.29, STEEL);               // front sight
+    gunBox(g, 0.03, 0.012, 0.012, 0, 0.058, 0.09, STEEL);                // rear sight
+    muzzle = [0, 0.025, -0.31]; sightY = 0.056;
   } else if (key === "shotgun") {
     gunBox(g, 0.06, 0.085, 0.22, 0, 0, 0, 0x2b2b2b);                     // receiver
     gunBox(g, 0.034, 0.034, 0.5, 0, 0.025, -0.36, 0x1a1a1a);             // barrel
@@ -580,6 +790,15 @@ function buildGun(key) {
     gunBox(g, 0.045, 0.06, 0.07, 0, -0.07, 0.09, 0x1b1b1b, { rx: -0.3 }); // grip
     gunBox(g, 0.01, 0.022, 0.01, 0, 0.05, -0.6, 0xffaa00, { basic: true }); // bead sight
     muzzle = [0, 0.025, -0.64]; sightY = 0.05;
+  } else if (key === "autoshot") {
+    gunBox(g, 0.062, 0.09, 0.24, 0, 0, 0, 0x2b2b2b);
+    gunBox(g, 0.036, 0.036, 0.4, 0, 0.025, -0.3, 0x1a1a1a);              // barrel
+    gunBox(g, 0.06, 0.05, 0.22, 0, 0.0, -0.26, 0x3a3f47);                // shroud
+    gunBox(g, 0.07, 0.1, 0.1, 0, -0.1, -0.02, 0x2a2a2a);                 // drum
+    gunBox(g, 0.05, 0.11, 0.06, 0, -0.1, 0.1, 0x1b1d21, { rx: -0.3 });
+    gunBox(g, 0.05, 0.09, 0.22, 0, -0.01, 0.24, 0x23262b);
+    gunBox(g, 0.01, 0.022, 0.01, 0, 0.05, -0.5, 0xffaa00, { basic: true });
+    muzzle = [0, 0.025, -0.52]; sightY = 0.05;
   } else if (key === "sniper") {
     gunBox(g, 0.055, 0.085, 0.3, 0, 0, 0, 0x2a3328);                     // receiver
     gunBox(g, 0.03, 0.03, 0.46, 0, 0.012, -0.52, STEEL);                 // barrel
@@ -596,6 +815,20 @@ function buildGun(key) {
     gunBox(g, 0.02, 0.02, 0.02, 0.066, 0.03, 0.06, STEEL);
     gunBox(g, 0.04, 0.07, 0.09, 0, -0.07, 0.0, POLY);                    // magazine
     muzzle = [0, 0.012, -0.84]; sightY = 0.09;
+  } else if (key === "marksman") {
+    gunBox(g, 0.058, 0.085, 0.28, 0, 0, 0, 0x2d2f28);
+    gunBox(g, 0.062, 0.065, 0.26, 0, -0.005, -0.25, 0x3a3f47);
+    gunBox(g, 0.028, 0.028, 0.3, 0, 0.012, -0.54, STEEL);
+    gunBox(g, 0.04, 0.04, 0.06, 0, 0.012, -0.72, 0x0f1012);
+    gunBox(g, 0.05, 0.085, 0.24, 0, -0.01, 0.25, 0x2d2f28);
+    gunBox(g, 0.04, 0.08, 0.06, 0, -0.08, -0.02, POLY, { rx: 0.2 });
+    gunBox(g, 0.05, 0.1, 0.055, 0, -0.09, 0.11, 0x1b1d21, { rx: -0.3 });
+    gunBox(g, 0.036, 0.036, 0.2, 0, 0.085, -0.02, 0x101010);             // built-in scope
+    gunBox(g, 0.05, 0.05, 0.05, 0, 0.085, -0.13, 0x101010);
+    gunBox(g, 0.046, 0.046, 0.05, 0, 0.085, 0.08, 0x101010);
+    gunBox(g, 0.04, 0.04, 0.004, 0, 0.085, -0.157, 0x4aa3ff, { basic: true });
+    gunBox(g, 0.03, 0.03, 0.04, 0, 0.06, -0.04, STEEL);
+    muzzle = [0, 0.012, -0.76]; sightY = 0.085;
   } else {   // knife
     gunBox(g, 0.022, 0.06, 0.3, 0, 0.02, -0.26, 0xdfe7f1, { emissive: 0x334455 });   // blade
     gunBox(g, 0.02, 0.04, 0.09, 0, 0.005, -0.45, 0xdfe7f1, { emissive: 0x334455 });  // tip
@@ -605,8 +838,23 @@ function buildGun(key) {
     for (const z of [-0.03, 0.02, 0.07]) gunBox(g, 0.05, 0.065, 0.015, 0, 0, z, 0x1b1b1b);   // grip wrap
     gunBox(g, 0.05, 0.06, 0.03, 0, 0, 0.115, 0x222222);                  // pommel
   }
+  if (MOUNT[key]) sightY = addSight(g, key, sightId || "iron");
   return { group: g, muzzle, sightY };
 }
+
+// where each hand grips each gun (gun-local space); the left hand is missing for the knife
+const HANDS = {
+  rifle:    { r: [0, -0.135, 0.12], l: [0, -0.05, -0.25] },
+  smg:      { r: [0, -0.115, 0.09], l: [0, -0.03, -0.2] },
+  lmg:      { r: [0, -0.14, 0.14],  l: [0, -0.06, -0.3] },
+  pistol:   { r: [0, -0.075, 0.07], l: [-0.012, -0.11, 0.04] },
+  revolver: { r: [0, -0.085, 0.1],  l: [-0.012, -0.12, 0.06] },
+  shotgun:  { r: [0, -0.115, 0.12], l: [0, -0.03, -0.28] },
+  autoshot: { r: [0, -0.12, 0.12],  l: [0, -0.06, -0.26] },
+  sniper:   { r: [0, -0.11, 0.15],  l: [0, -0.05, -0.22] },
+  marksman: { r: [0, -0.12, 0.14],  l: [0, -0.05, -0.24] },
+  knife:    { r: [0, -0.015, 0.04] },
+};
 
 let flashTexture = null;
 function flashTex() {
@@ -625,31 +873,36 @@ const GS = 0.68;   // first-person gun scale
 const gunGroup = new THREE.Group();
 camera.add(gunGroup);
 const GUN_HIP = new THREE.Vector3(0.19, -0.19, -0.4);
-const gunMeshes = WEAPONS.map(w => {
+function makeFPGun(def) {
   const g = new THREE.Group();
-  const built = buildGun(w.key);
+  const built = buildGun(def.key, def.sightId);
   g.add(built.group);
-  const HAND = {
-    rifle: { r: [0, -0.135, 0.12], l: [0, -0.05, -0.25] }, shotgun: { r: [0, -0.115, 0.12], l: [0, -0.03, -0.28] },
-    sniper: { r: [0, -0.11, 0.15], l: [0, -0.05, -0.22] }, knife: { r: [0, -0.015, 0.04] },
-  }[w.key];
+  const HAND = HANDS[def.key];
   const SLEEVE = 0x3a4a5f, GLOVE = 0x15171a;
   gunBox(g, 0.08, 0.08, 0.1, HAND.r[0], HAND.r[1], HAND.r[2], GLOVE);
   limb(g, HAND.r, [HAND.r[0] + 0.16, HAND.r[1] - 0.22, HAND.r[2] + 0.7], 0.1, SLEEVE);
   if (HAND.l) {
     gunBox(g, 0.08, 0.08, 0.1, HAND.l[0], HAND.l[1], HAND.l[2], GLOVE);
     limb(g, HAND.l, [HAND.l[0] - 0.14, HAND.l[1] - 0.22, HAND.l[2] + 0.75], 0.1, SLEEVE);
+  }
+  if (!def.melee) {
     const flash = new THREE.Group();
     flash.name = "flash"; flash.visible = false; flash.position.set(...built.muzzle);
     flash.add(new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })));
     g.add(flash);
   }
-  // aim-down-sights position: the sight (red dot, bead or scope) sits at the centre of the screen
-  g.userData.ads = w.melee ? GUN_HIP.clone() : new THREE.Vector3(0, -built.sightY * GS - 0.004, -0.32);
+  // aim-down-sights position: the sight (dot, bead, post or scope) sits at the centre of the screen
+  g.userData.ads = def.melee ? GUN_HIP.clone() : new THREE.Vector3(0, -built.sightY * GS - 0.004, -0.32);
   g.visible = false;
   gunGroup.add(g);
   return g;
-});
+}
+const gunMeshes = WEAPONS.map(makeFPGun);
+function rebuildFP(i) {
+  gunGroup.remove(gunMeshes[i]);
+  gunMeshes[i] = makeFPGun(WEAPONS[i]);
+  gunMeshes[i].visible = i === player.weapon;
+}
 gunGroup.position.copy(GUN_HIP); gunGroup.scale.setScalar(GS);
 
 // ---------------------------------------------------------------- player
@@ -782,24 +1035,31 @@ function makeModel(color) {
   const arms = new THREE.Group();
   arms.position.set(0, 1.28, 0);
   g.add(arms);
-  const SHR = [0.4, 0, 0], SHL = [-0.4, 0, 0];
-  deco(arms, 0.16, 0.16, 0.16, SHR[0], 0, 0, VEST);
-  deco(arms, 0.16, 0.16, 0.16, SHL[0], 0, 0, VEST);
-  const gunPos = [0.2, -0.08, -0.45];
-  const handR = [gunPos[0], gunPos[1] - 0.13, gunPos[2] + 0.12], handL = [gunPos[0], gunPos[1] - 0.05, gunPos[2] - 0.25];
-  limb(arms, SHR, handR, 0.12, color);
-  limb(arms, SHL, handL, 0.12, color);
-  deco(arms, 0.1, 0.1, 0.1, handR[0], handR[1], handR[2], GLOVE);
-  deco(arms, 0.1, 0.1, 0.1, handL[0], handL[1], handL[2], GLOVE);
-  const guns = ["rifle", "shotgun", "sniper", "knife"].map((k, i) => {
-    const gm = buildGun(k).group;
-    gm.position.set(...(k === "knife" ? [0.22, -0.2, -0.38] : gunPos));
-    gm.visible = i === 0;
-    arms.add(gm);
-    return gm;
-  });
   scene.add(g);
-  return { g, body, head, legL, legR, arms, guns };
+  const model = { g, body, head, legL, legR, arms, color, heldKey: null };
+  equipModel(model, "rifle");
+  return model;
+}
+// put the right weapon in a model's hands (and move the gloves to fit it)
+function equipModel(m, key) {
+  if (!HANDS[key]) key = "rifle";
+  const arms = m.arms;
+  while (arms.children.length) arms.remove(arms.children[0]);
+  const H = HANDS[key], GLOVE = 0x15171a, VEST = 0x2b3038;
+  const gunPos = key === "knife" ? [0.22, -0.2, -0.38] : [0.2, -0.08, -0.45];
+  const SHR = [0.4, 0, 0], SHL = [-0.4, 0, 0];
+  gunBox(arms, 0.16, 0.16, 0.16, SHR[0], 0, 0, VEST);
+  gunBox(arms, 0.16, 0.16, 0.16, SHL[0], 0, 0, VEST);
+  const handR = [gunPos[0] + H.r[0], gunPos[1] + H.r[1], gunPos[2] + H.r[2]];
+  limb(arms, SHR, handR, 0.12, m.color);
+  gunBox(arms, 0.1, 0.1, 0.1, handR[0], handR[1], handR[2], GLOVE);
+  const handL = H.l ? [gunPos[0] + H.l[0], gunPos[1] + H.l[1], gunPos[2] + H.l[2]] : [-0.38, -0.5, -0.1];
+  limb(arms, SHL, handL, 0.12, m.color);
+  gunBox(arms, 0.1, 0.1, 0.1, handL[0], handL[1], handL[2], GLOVE);
+  const gm = buildGun(key).group;
+  gm.position.set(gunPos[0], gunPos[1], gunPos[2]);
+  arms.add(gm);
+  m.heldKey = key;
 }
 
 function makeBot(i) {
@@ -979,7 +1239,7 @@ function burst(pos, color, n = 6, speed = 4) {
 }
 // ejected brass
 const brassGeo = new THREE.BoxGeometry(0.025, 0.025, 0.06), brassMat = new THREE.MeshBasicMaterial({ color: 0xd9a441 });
-function ejectShell(key) {
+function ejectShell(delay) {
   setTimeout(() => {
     if (!player.alive) return;
     const m = new THREE.Mesh(brassGeo, brassMat);
@@ -991,7 +1251,7 @@ function ejectShell(key) {
     const v = right.multiplyScalar(1.8 + Math.random()).add(new THREE.Vector3(0, 1.5 + Math.random(), 0)).add(back.multiplyScalar(0.5));
     scene.add(m);
     particles.push({ m, v, life: 0.9, keep: true });
-  }, key === "rifle" ? 0 : key === "shotgun" ? 320 : 550);
+  }, delay);
 }
 function muzzleFlash() {
   const fl = gunMeshes[player.weapon].getObjectByName("flash");
@@ -1029,7 +1289,7 @@ function shoot() {
   if (w.melee) { knifeSwing(w); return; }
   if (a.mag <= 0) { sfx.empty(); player.cooldown = 0.25; if (a.res > 0) reload(); return; }
   a.mag--; player.cooldown = w.rate;
-  sfx[w.key]();
+  sfx[w.sfx || w.key]();
   const spreadBase = player.ads ? w.adsSpread : w.spread;
   const moving = Math.hypot(player.vel.x, player.vel.z) > 3 ? 1.6 : 1;
   const spread = spreadBase * moving * (player.onGround ? 1 : 2);
@@ -1051,7 +1311,7 @@ function shoot() {
       if (bot || rem) {
         const isHead = h.object.userData.part === "head";
         let d = w.dmg * (isHead ? 2 : 1);
-        if (w.key === "shotgun") d *= clamp(1.3 - h.distance / 35, 0.2, 1);
+        if (w.falloff) d *= clamp(1.3 - h.distance / 35, 0.2, 1);
         if (bot) dmgPer[bot.id] = (dmgPer[bot.id] || 0) + d;
         else { const rd = dmgRem[rem.id] || (dmgRem[rem.id] = { d: 0, head: false }); rd.d += d; if (isHead) rd.head = true; }
         if (isHead) headshot = true;
@@ -1083,7 +1343,7 @@ function shoot() {
   player.recoilP += w.recoil * (player.ads ? 0.5 : 1) * (0.6 + Math.random() * 0.4);
   player.recoilY += rand(-0.25, 0.25) * w.recoil;
   muzzleFlash();
-  if (w.key !== "knife") ejectShell(w.key);
+  if (w.eject >= 0) ejectShell(w.eject);
   if (a.mag <= 0 && a.res > 0) setTimeout(reload, 200);
   updateHud();
 }
@@ -1208,12 +1468,23 @@ function dmgNumber(pos, amount, head) {
 const streak = { n: 0, multi: 0, last: 0 };
 const STREAKS = { 3: "KILLING SPREE", 5: "RAMPAGE", 8: "UNSTOPPABLE", 12: "GODLIKE" };
 const MULTI = ["", "", "DOUBLE KILL", "TRIPLE KILL", "QUAD KILL"];
+let coinPopT = 0;
+function earnCoins(n) {
+  save.coins += n; saveGame(); updateCoinUI();
+  const el = document.createElement("div");
+  el.className = "dn coinpop"; el.textContent = "+" + n;
+  el.style.left = "calc(50% + 70px)"; el.style.top = "calc(50% - 6px)";
+  $("dn").appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+function updateCoinUI() { $("coins").textContent = save.coins; $("coinHud").textContent = save.coins; }
 function registerKill(head) {
   const now = performance.now();
   streak.multi = now - streak.last < 3500 ? streak.multi + 1 : 1;
   streak.last = now; streak.n++;
   const text = STREAKS[streak.n] || (streak.multi >= 2 ? MULTI[Math.min(streak.multi, 4)] : head ? "HEADSHOT" : "");
   if (text) { banner(text); if (text !== "HEADSHOT") sfx.streak(); }
+  earnCoins(10 + (head ? 5 : 0) + (STREAKS[streak.n] ? 10 : 0));
 }
 
 // ---------------------------------------------------------------- leaderboard / scoreboard / match
@@ -1250,7 +1521,8 @@ function checkWin() {
   const w = getRows().find(r => r.k >= SCORE_LIMIT);
   if (!w) return;
   matchOverT = 7;
-  msg(w.me ? "VICTORY!" : w.name.toUpperCase() + " WINS", 6500);
+  msg(w.me ? "VICTORY! +50 COINS" : w.name.toUpperCase() + " WINS", 6500);
+  if (w.me) earnCoins(50);
   showBoard(true);
 }
 function resetMatch() {
@@ -1393,7 +1665,7 @@ function createHostCore(serverName) {
       if (players.size >= MAX) { conn.out(JSON.stringify({ t: "full" })); return; }
       const name = String(m.name || "Player").replace(/[^\w \-.]/g, "").slice(0, 12) || "Player";
       const id = nextId++, sp = spawnFor(null);
-      p = conn.player = { id, name, conn, color: COLORS[id % COLORS.length], x: sp[0], y: 0, z: sp[1], yaw: 0, pitch: 0, w: 0, cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0 };
+      p = conn.player = { id, name, conn, color: COLORS[id % COLORS.length], x: sp[0], y: 0, z: sp[1], yaw: 0, pitch: 0, w: 0, wk: "rifle", cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0 };
       send(p, { t: "welcome", id, name, spawn: sp, server: serverName,
         players: [...players.values()].map(o => ({ id: o.id, name: o.name, color: o.color, x: o.x, y: o.y, z: o.z, alive: o.alive })) });
       players.set(id, p);
@@ -1403,7 +1675,7 @@ function createHostCore(serverName) {
     }
     if (!p) return;
     if (m.t === "st" && p.alive) {
-      if ([m.x, m.y, m.z, m.yaw, m.pitch].every(Number.isFinite)) { p.x = m.x; p.y = m.y; p.z = m.z; p.yaw = m.yaw; p.pitch = m.pitch; p.w = m.w | 0; p.cr = m.c ? 1 : 0; }
+      if ([m.x, m.y, m.z, m.yaw, m.pitch].every(Number.isFinite)) { p.x = m.x; p.y = m.y; p.z = m.z; p.yaw = m.yaw; p.pitch = m.pitch; p.w = m.w | 0; p.cr = m.c ? 1 : 0; p.wk = typeof m.k === "string" ? m.k.slice(0, 12) : ""; }
     } else if (m.t === "shot" && p.alive) {
       broadcast({ t: "shot", id: p.id, f: m.f, e: m.e, w: m.w }, p);
     } else if (m.t === "hit" && p.alive) {
@@ -1441,7 +1713,7 @@ function createHostCore(serverName) {
       }
       if (tick % 20 === 0) p.hits = 0;
     }
-    if (players.size) broadcast({ t: "s", p: [...players.values()].map(p => [p.id, r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), p.w, p.cr, p.alive ? 1 : 0]) });
+    if (players.size) broadcast({ t: "s", p: [...players.values()].map(p => [p.id, r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), p.w, p.cr, p.alive ? 1 : 0, p.wk]) });
   }, 50);
   return { connect: out => ({ out, player: null }), receive, drop, count: () => players.size, stop() { stopTick(); players.clear(); } };
 }
@@ -1567,7 +1839,7 @@ function netHandle(m) {
     case "s":
       for (const a of m.p) {
         const r = net.remotes.get(a[0]); if (!r) continue;
-        r.tx.set(a[1], a[2], a[3]); r.tyaw = a[4]; r.crouch = !!a[7]; r.pitch = a[5]; r.weapon = a[6];
+        r.tx.set(a[1], a[2], a[3]); r.tyaw = a[4]; r.crouch = !!a[7]; r.pitch = a[5]; r.weapon = a[6]; r.wk = a[9];
         if (!r.alive && a[8]) r.pos.copy(r.tx);
         r.alive = !!a[8];
       }
@@ -1650,7 +1922,7 @@ function updateRemotes(dt) {
     r.yaw += dy * k;
     r.g.position.copy(r.pos); r.g.rotation.y = r.yaw;
     r.g.scale.y = r.crouch ? 0.75 : 1;
-    if (r.shownW !== r.weapon) { r.guns.forEach((gm, i) => { gm.visible = i === (r.weapon | 0); }); r.shownW = r.weapon; }
+    if (r.wk && r.shownK !== r.wk) { r.shownK = r.wk; equipModel(r, r.wk); }
     r.arms.rotation.x += ((r.pitch || 0) - r.arms.rotation.x) * k;
     const sp = Math.hypot(r.pos.x - px, r.pos.z - pz) / Math.max(dt, 0.001);
     r.walk += dt * Math.min(sp, 10) * 1.2;
@@ -1665,7 +1937,7 @@ function netTick(dt) {
   if (net.sendT < 0.05) return;
   net.sendT = 0;
   net.send({ t: "st", x: r2(player.pos.x), y: r2(player.pos.y), z: r2(player.pos.z),
-    yaw: r2(player.yaw), pitch: r2(player.pitch), w: player.weapon, c: player.crouch ? 1 : 0 });
+    yaw: r2(player.yaw), pitch: r2(player.pitch), w: player.weapon, k: WEAPONS[player.weapon].key, c: player.crouch ? 1 : 0 });
 }
 
 // ---------------------------------------------------------------- input
@@ -1683,9 +1955,147 @@ function syncMode() {
   document.querySelectorAll(".solo-only").forEach(e => e.style.display = mp ? "none" : "");
   document.querySelectorAll(".mp-only").forEach(e => e.style.display = mp ? "" : "none");
   $("play").textContent = mp ? "PLAY ONLINE" : "PLAY SOLO";
+  document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.mode === (mp ? "mp" : "solo")));
 }
 $("mode").addEventListener("change", () => { syncMode(); if ($("mode").value === "mp") refreshServers(); });
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { $("mode").value = b.dataset.mode; $("mode").dispatchEvent(new Event("change")); }));
 syncMode();
+
+// ---------------------------------------------------------------- menu tabs and the armory
+let armoryOpen = false;
+function showTab(name) {
+  document.querySelectorAll("#menu .tab").forEach(t => t.classList.toggle("on", t.id === "tab-" + name));
+  document.querySelectorAll("#menu .nav").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  armoryOpen = name === "armory";
+  if (armoryOpen) renderArmory();
+}
+document.querySelectorAll("#menu .nav").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+const armory = { slot: 0, sel: save.slots[0] };
+const elt = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+function updateLoadoutLine() { $("loadoutLine").textContent = "LOADOUT  " + WEAPONS.map(w => w.name).join("  ·  "); }
+
+function applyLoadout(slot) {   // swap the weapon in one slot for the one you equipped
+  WEAPONS[slot] = weaponDef(save.slots[slot]);
+  rebuildFP(slot);
+  player.ammo[slot] = { mag: WEAPONS[slot].mag, res: WEAPONS[slot].reserve };
+  if (slot === player.weapon) player.reloading = 0;
+  updateLoadoutLine(); updateHud();
+}
+function buyWeapon(key) {
+  const d = CATALOG[key];
+  if (save.owned.includes(key) || save.coins < d.price) return;
+  save.coins -= d.price; save.owned.push(key);
+  equipWeapon(key);
+}
+function equipWeapon(key) {
+  const slot = CATALOG[key].slot;
+  save.slots[slot] = key; saveGame(); updateCoinUI(); applyLoadout(slot); renderArmory();
+}
+function buySight(id) {
+  if (save.sights.includes(id) || save.coins < SIGHTS[id].price) return;
+  save.coins -= SIGHTS[id].price; save.sights.push(id);
+  equipSight(armory.sel, id);
+}
+function equipSight(gun, id) {
+  save.sightOn[gun] = id; saveGame(); updateCoinUI();
+  save.slots.forEach((k, i) => { if (k === gun) applyLoadout(i); });
+  renderArmory();
+}
+
+function statRow(label, pct) {
+  const row = elt("div", "stat"), bar = elt("div", "bar"), fill = document.createElement("i");
+  fill.style.width = Math.max(4, Math.min(100, pct)) + "%";
+  bar.appendChild(fill); row.append(elt("span", "", label), bar);
+  return row;
+}
+function weaponCard(key) {
+  const d = CATALOG[key], card = elt("div", "wc" + (armory.sel === key ? " sel" : ""));
+  card.append(elt("div", "n", d.name), elt("div", "t", d.cls.toUpperCase()));
+  if (!d.melee) {
+    card.append(statRow("DAMAGE", d.dmg * d.pellets * 1.15), statRow("RATE", (1 / d.rate) * 5.5), statRow("RANGE", d.range / 4), statRow("MAGAZINE", d.mag * 2.2));
+  } else card.append(statRow("DAMAGE", 55), statRow("BACKSTAB", 100));
+  const owned = save.owned.includes(key), equipped = save.slots[d.slot] === key;
+  card.append(elt("div", "st2 " + (owned ? "own" : "price"), equipped ? "EQUIPPED" : owned ? "OWNED" : d.price + " COINS"));
+  card.addEventListener("click", () => { armory.sel = key; renderArmory(); });
+  return card;
+}
+function renderArmory() {
+  $("slotTabs").replaceChildren(...SLOT_NAMES.map((n, i) => {
+    const b = elt("button", i === armory.slot ? "on" : "", n);
+    b.type = "button";
+    b.addEventListener("click", () => { armory.slot = i; armory.sel = save.slots[i]; renderArmory(); });
+    return b;
+  }));
+  if (CATALOG[armory.sel].slot !== armory.slot) armory.sel = save.slots[armory.slot];
+  $("wcards").replaceChildren(...Object.keys(CATALOG).filter(k => CATALOG[k].slot === armory.slot).map(weaponCard));
+
+  const key = armory.sel, d = CATALOG[key], owned = save.owned.includes(key), equipped = save.slots[d.slot] === key;
+  $("prevName").textContent = d.name;
+  $("prevDesc").textContent = d.desc;
+  const act = elt("button", "small", equipped ? "EQUIPPED" : owned ? "EQUIP" : save.coins >= d.price ? "BUY · " + d.price + " COINS" : "NEED " + (d.price - save.coins) + " MORE COINS");
+  act.type = "button"; act.disabled = equipped || (!owned && save.coins < d.price);
+  act.addEventListener("click", () => owned ? equipWeapon(key) : buyWeapon(key));
+  $("prevAction").replaceChildren(act);
+
+  const chips = $("sightChips"); chips.replaceChildren();
+  const cur = d.sight ? (save.sights.includes(save.sightOn[key]) ? save.sightOn[key] : "iron") : null;
+  if (d.sight) {
+    for (const id of Object.keys(SIGHTS)) {
+      const s2 = SIGHTS[id], has = save.sights.includes(id);
+      const chip = elt("button", "chip" + (cur === id ? " on" : ""), s2.name);
+      chip.type = "button";
+      chip.appendChild(elt("small", has ? "own" : "price", cur === id ? "EQUIPPED" : has ? "OWNED" : s2.price + " COINS" + (s2.fov ? " · ZOOM" : "")));
+      chip.disabled = !has && save.coins < s2.price;
+      chip.addEventListener("click", () => has ? equipSight(key, id) : buySight(id));
+      chips.appendChild(chip);
+    }
+    $("sightHint").textContent = owned ? "Sights you buy work on every gun that takes them." : "Buy the weapon to fit a sight to it. You can still preview them.";
+  } else $("sightHint").textContent = d.melee ? "" : "This weapon has its own built-in sights.";
+  $("prevCap").textContent = d.cls.toUpperCase();
+  previewSet(key, cur);
+}
+
+// rotating 3D preview of the selected gun, drawn by its own small renderer
+let prev = null;
+function ensurePreview() {
+  if (prev) return prev;
+  try {
+    const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    r.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const sc = new THREE.Scene();
+    sc.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.95));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(2, 3, 2); sc.add(dl);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 30);
+    cam.position.set(0, 0.5, 2.5); cam.lookAt(0, -0.02, 0);
+    const root = new THREE.Group(); sc.add(root);
+    $("preview").insertBefore(r.domElement, $("preview").firstChild);
+    prev = { r, sc, cam, root, key: null, sight: null, w: 0, h: 0 };
+  } catch (e) { prev = { dead: true }; }
+  return prev;
+}
+function previewSet(key, sight) {
+  const p = ensurePreview();
+  if (p.dead || (p.key === key && p.sight === sight)) return;
+  p.key = key; p.sight = sight;
+  while (p.root.children.length) p.root.remove(p.root.children[0]);
+  const group = buildGun(key, sight || undefined).group;
+  const box = new THREE.Box3().setFromObject(group), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const sc = 1.3 / Math.max(size.x, size.z, 0.3);
+  group.position.copy(c).multiplyScalar(-1);
+  const holder = new THREE.Group(); holder.add(group); holder.scale.setScalar(sc);
+  p.root.add(holder);
+}
+function renderPreview(dt) {
+  const p = prev;
+  if (!p || p.dead) return;
+  const box = $("preview"), w = box.clientWidth, h = box.clientHeight;
+  if (!w || !h) return;
+  if (w !== p.w || h !== p.h) { p.w = w; p.h = h; p.r.setSize(w, h); p.cam.aspect = w / h; p.cam.updateProjectionMatrix(); }
+  p.root.rotation.y += dt * 0.7;
+  p.r.render(p.sc, p.cam);
+}
+updateCoinUI(); updateLoadoutLine();
 
 // ---------------------------------------------------------------- server browser
 // Servers are saved in this browser. Each one answers a quick "info" request with its name and player count.
@@ -1844,6 +2254,7 @@ document.addEventListener("pointerlockchange", () => {
   if (playing) setBotCount(mp ? 0 : parseInt($("botCount").value));
   if (playing && !player.initialised) { player.initialised = true; respawnPlayer(); switchWeapon(0); gunMeshes[0].visible = true; updateHud(); }
   if (!playing) {
+    showTab("play");
     mouseDown = false; for (const k in keys) keys[k] = false; if (matchOverT <= 0) showBoard(false);
     if (net.ws) { netDisconnect(); if (!$("note").className) setNote("You left the match. Click Play to rejoin."); }
   }
@@ -2100,6 +2511,7 @@ function loop() {
     camera.position.set(Math.sin(t) * 55, 48, Math.cos(t) * 55);
     camera.lookAt(0, 3, 0);
     gunGroup.visible = false;
+    if (armoryOpen) renderPreview(dt);
   }
   if (playing) updateCamera(dt);
   sky.position.copy(camera.position);
@@ -2108,7 +2520,7 @@ function loop() {
 loop();
 
 // expose for debugging/tests
-window.__game = { player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
+window.__game = { WEAPONS, save, CATALOG, player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
 })();
 </script>
 </body>

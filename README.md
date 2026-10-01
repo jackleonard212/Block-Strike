@@ -56,6 +56,17 @@ To show some servers to everyone who opens the page, list them in `servers.json`
 [{ "name": "Alpha", "addr": "wss://alpha.example.com" }]
 ```
 
+## Armory and coins
+
+Every kill earns coins (+10, +5 more for a headshot or backstab, +10 for a kill streak, +50 for winning a solo match). Spend them in the **Armory** tab on new weapons and sights:
+
+- **Primary:** assault rifle, SMG, LMG
+- **Secondary:** shotgun, pistol, revolver, auto shotgun
+- **Sniper slot:** bolt-action sniper, semi-auto marksman
+- **Sights:** iron, red dot, holographic and a 4x scope for rifles, SMGs, LMGs and pistols
+
+Your coins and loadout are saved in your browser. Other players see the weapon you have out. Coins are stored on your own computer, so they only count for you.
+
 ## Features
 
 - Dust II-style map: T spawn in the south, CT spawn in the north, long A, short A, mid doors, B tunnels and two bomb-site style areas. Bots path around walls.
