@@ -38,15 +38,27 @@
   #feed div{margin-bottom:3px;background:rgba(0,0,0,.35);padding:2px 8px;border-radius:3px}
   #msg{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-size:34px;font-weight:900;text-shadow:0 3px 6px #000;opacity:0;transition:opacity .4s;color:#ff5555}
   #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
-    background:linear-gradient(135deg,rgba(10,10,30,.88),rgba(30,10,40,.9));cursor:pointer;z-index:5}
+    background:linear-gradient(135deg,rgba(10,10,30,.88),rgba(30,10,40,.9));z-index:5;overflow:auto}
   #menu h1{font-size:84px;font-weight:900;letter-spacing:8px;background:linear-gradient(90deg,#38bdf8,#f472b6);-webkit-background-clip:text;color:transparent}
   #menu p{margin-top:8px;font-size:20px;opacity:.85}
-  #menu .btn{margin-top:28px;padding:16px 56px;font-size:26px;font-weight:800;background:#f472b6;color:#111;border-radius:6px;letter-spacing:3px}
+  #menu .btn{cursor:pointer;margin-top:28px;padding:16px 56px;font-size:26px;font-weight:800;background:#f472b6;color:#111;border-radius:6px;letter-spacing:3px}
   #menu table{margin-top:34px;border-collapse:collapse;font-size:15px;opacity:.9}
   #menu td{padding:4px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
   #menu td:first-child{color:#facc15;font-weight:700;text-align:right}
   #menu .opts{margin-top:20px;font-size:15px;display:flex;gap:22px;align-items:center}
-  #menu select,#menu input{pointer-events:auto}
+  #menu select,#menu input{pointer-events:auto;font:inherit;padding:4px 8px;background:#1b1b2e;color:#fff;border:1px solid #556;border-radius:4px}
+  #menu input[type=range]{padding:0}
+  #menu #server{width:220px}
+  #menu #pname{width:110px}
+  #menu .opts{flex-wrap:wrap;justify-content:center;padding:0 16px}
+  #menu #note{text-align:center;padding:0 16px}
+  #menu #note.err{color:#ff7a7a}
+  #board{position:absolute;left:50%;top:18%;transform:translateX(-50%);display:none;min-width:340px;background:rgba(0,0,0,.6);padding:12px 18px;border-radius:6px;font-size:16px}
+  #board table{width:100%;border-collapse:collapse}
+  #board th{font-size:12px;letter-spacing:2px;opacity:.7;text-align:right;padding:2px 8px}
+  #board th:first-child,#board td:first-child{text-align:left}
+  #board td{padding:3px 8px;text-align:right;font-weight:700}
+  #board tr.me td{color:#facc15}
 </style>
 </head>
 <body>
@@ -58,34 +70,45 @@
   <div id="score"><span>KILLS <b id="kills">0</b></span><span>DEATHS <b id="deaths">0</b></span><span>⏱ <b id="time">0:00</b></span></div>
   <div id="feed"></div>
   <div id="msg"></div>
+  <div id="board"></div>
   <div id="bottom"><div id="hpbar"><div id="hpfill"></div></div><div id="hptxt">100</div></div>
   <div id="ammo"><div id="wname">ASSAULT RIFLE</div><div class="n"><span id="mag">30</span> <small>/ <span id="res">120</span></small></div><div id="slots"></div></div>
 </div>
 
 <div id="menu">
   <h1>BLOCKSTRIKE</h1>
-  <p>Fast, blocky arena FPS. Kill the bots. Don't die.</p>
+  <p id="note">Fast, blocky arena FPS. Play solo against bots or online with friends.</p>
   <div class="opts">
-    <label>Bots
+    <label>Mode
+      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer</option></select>
+    </label>
+    <label class="solo-only">Bots
       <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
     </label>
-    <label>Difficulty
+    <label class="solo-only">Difficulty
       <select id="diff"><option value="0.6">Easy</option><option value="1" selected>Normal</option><option value="1.5">Hard</option></select>
+    </label>
+    <label class="mp-only">Name
+      <input id="pname" maxlength="12" value="Player">
+    </label>
+    <label class="mp-only">Server
+      <input id="server" value="ws://localhost:3000" spellcheck="false">
     </label>
     <label>Sensitivity
       <input id="sens" type="range" min="0.3" max="3" step="0.1" value="1">
     </label>
   </div>
-  <div class="btn">CLICK TO PLAY</div>
+  <div class="btn" id="play">CLICK TO PLAY</div>
   <table>
     <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
     <tr><td>Space</td><td>Jump (hold to bunny-hop)</td><td>C / Ctrl</td><td>Crouch / slide</td></tr>
     <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
     <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
+    <tr><td>Tab</td><td>Scoreboard (multiplayer)</td><td>Esc</td><td>Pause / leave match</td></tr>
   </table>
 </div>
 
-<script src="three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -94,6 +117,7 @@
 const $ = id => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const r2 = v => Math.round(v * 100) / 100;
 
 // ---------------------------------------------------------------- audio (synth, no assets)
 let actx = null;
@@ -354,8 +378,8 @@ let mouseDown = false, playing = false, gameTime = 0, sens = 1, diff = 1;
 function playerHeight() { return player.crouch ? CROUCH_H : STAND_H; }
 function eyeHeight() { return playerHeight() - 0.15; }
 
-function respawnPlayer() {
-  const sp = pickSpawn();
+function respawnPlayer(spawn) {
+  const sp = spawn || pickSpawn();
   player.pos.copy(sp); player.vel.set(0, 0, 0);
   player.hp = 100; player.alive = true; player.crouch = false; player.reloading = 0;
   player.ammo = WEAPONS.map(w => ({ mag: w.mag, res: w.reserve }));
@@ -381,8 +405,7 @@ const botMeshParts = {};
 const botColors = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
 const BOT_NAMES = ["Zed", "Vex", "Nyx", "Rook", "Blitz", "Kilo", "Mako", "Echo", "Jinx", "Onyx", "Pyro", "Quill", "Raze", "Sable", "Tux", "Volt"];
 
-function makeBot(i) {
-  const color = botColors[i % botColors.length];
+function makeModel(color) {
   const mat = new THREE.MeshLambertMaterial({ color });
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.4), mat);
@@ -398,9 +421,15 @@ function makeBot(i) {
   eyes.position.set(0, 1.68, -0.2);
   [body, head, legL, legR, gun].forEach(m => { m.castShadow = true; });
   body.userData = { part: "body" }; head.userData = { part: "head" };
-  legL.userData = legR.userData = { part: "body" };
+  legL.userData = { part: "body" }; legR.userData = { part: "body" };
   g.add(body, head, legL, legR, gun, eyes);
   scene.add(g);
+  return { g, body, head, legL, legR };
+}
+
+function makeBot(i) {
+  const color = botColors[i % botColors.length];
+  const { g, body, head, legL, legR } = makeModel(color);
   const bot = {
     id: i, name: BOT_NAMES[i % BOT_NAMES.length], group: g, legL, legR, body, head,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), onGround: false,
@@ -542,6 +571,7 @@ const ray = new THREE.Raycaster();
 function botMeshes() {
   const out = [];
   for (const b of bots) if (b.alive) out.push(b.body, b.head, b.legL, b.legR);
+  for (const r of net.remotes.values()) if (r.alive) out.push(r.body, r.head, r.legL, r.legR);
   return out;
 }
 function shoot() {
@@ -556,7 +586,8 @@ function shoot() {
   const origin = camera.getWorldPosition(new THREE.Vector3());
   const targets = botMeshes().concat(wallMeshes);
   let hitAny = false, killed = false, headshot = false;
-  const dmgPer = {};
+  const dmgPer = {}, dmgRem = {};
+  let shotFrom = null, shotTo = null;
   for (let i = 0; i < w.pellets; i++) {
     const dir = new THREE.Vector3(0, 0, -1);
     dir.x += rand(-spread, spread); dir.y += rand(-spread, spread);
@@ -566,12 +597,13 @@ function shoot() {
     const end = origin.clone().addScaledVector(dir, w.range);
     if (hits.length) {
       const h = hits[0]; end.copy(h.point);
-      const bot = h.object.userData.bot;
-      if (bot) {
+      const bot = h.object.userData.bot, rem = h.object.userData.remote;
+      if (bot || rem) {
         const isHead = h.object.userData.part === "head";
         let d = w.dmg * (isHead ? 2 : 1);
         if (w.key === "shotgun") d *= clamp(1.3 - h.distance / 35, 0.2, 1);
-        dmgPer[bot.id] = (dmgPer[bot.id] || 0) + d;
+        if (bot) dmgPer[bot.id] = (dmgPer[bot.id] || 0) + d;
+        else { const rd = dmgRem[rem.id] || (dmgRem[rem.id] = { d: 0, head: false }); rd.d += d; if (isHead) rd.head = true; }
         if (isHead) headshot = true;
         burst(h.point, 0xcc2222, 5, 3);
         hitAny = true;
@@ -579,11 +611,16 @@ function shoot() {
     }
     const muzzle = tmpA.set(0.2, -0.12, -0.8).applyMatrix4(camera.matrixWorld);
     if (i < 3) spawnTracer(muzzle.clone(), end);
+    if (i === 0) { shotFrom = muzzle.clone(); shotTo = end.clone(); }
   }
   for (const id in dmgPer) {
     const bot = bots[id];
     bot.hp -= dmgPer[id];
     if (bot.hp <= 0) { killBot(bot, headshot); killed = true; }
+  }
+  if (net.on) {
+    net.send({ t: "shot", f: shotFrom.toArray().map(r2), e: shotTo.toArray().map(r2), w: w.key });
+    for (const id in dmgRem) { net.send({ t: "hit", id: +id, dmg: Math.round(dmgRem[id].d), head: dmgRem[id].head }); killed = false; }
   }
   if (hitAny) showHitMarker(killed);
   if (hitAny) (headshot ? sfx.head : sfx.hit)();
@@ -664,20 +701,210 @@ function updateHud() {
   $("slots").innerHTML = WEAPONS.map((x, i) => i === player.weapon ? `<b>[${i + 1}] ${x.key}</b>` : `[${i + 1}] ${x.key}`).join("  ");
 }
 
+// ---------------------------------------------------------------- multiplayer
+// The server (server.js) owns health, kills and respawns. Clients send their own
+// position 20x/second and report hits; everything else is relayed.
+const net = {
+  ws: null, on: false, id: null, remotes: new Map(), sendT: 0, board: [],
+  send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
+};
+
+function nameTag(text) {
+  const c = document.createElement("canvas"); c.width = 256; c.height = 64;
+  const g = c.getContext("2d");
+  g.font = "bold 34px Segoe UI, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.lineWidth = 6; g.strokeStyle = "rgba(0,0,0,.85)"; g.strokeText(text, 128, 34);
+  g.fillStyle = "#fff"; g.fillText(text, 128, 34);
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  spr.scale.set(1.8, 0.45, 1); spr.position.y = 2.3;
+  return spr;
+}
+
+function addRemote(info) {
+  if (info.id === net.id || net.remotes.has(info.id)) return;
+  const m = makeModel(info.color || 0x888888);
+  m.g.add(nameTag(info.name));
+  const r = Object.assign(m, {
+    id: info.id, name: info.name, alive: info.alive !== false, init: true,
+    pos: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0), tx: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0),
+    yaw: 0, tyaw: 0, walk: 0, crouch: false,
+  });
+  [m.body, m.head, m.legL, m.legR].forEach(x => x.userData.remote = r);
+  m.g.position.copy(r.pos);
+  net.remotes.set(info.id, r);
+}
+function removeRemote(id) {
+  const r = net.remotes.get(id); if (!r) return;
+  scene.remove(r.g); net.remotes.delete(id);
+}
+
+function netDisconnect() {
+  const ws = net.ws;
+  net.ws = null; net.on = false; net.id = null;
+  if (ws) { ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null; try { ws.close(); } catch (e) { /* already closed */ } }
+  for (const id of [...net.remotes.keys()]) removeRemote(id);
+  net.board = [];
+}
+
+function netConnect(url, name) {
+  netDisconnect();
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { setNote("That server address isn't valid.", true); document.exitPointerLock(); return; }
+  net.ws = ws;
+  ws.onopen = () => ws.send(JSON.stringify({ t: "join", name }));
+  ws.onmessage = e => { try { netHandle(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+  ws.onclose = () => {
+    if (net.ws !== ws) return;
+    const joined = net.on;
+    netDisconnect();
+    setNote(joined ? "Disconnected from the server." : "Could not connect to " + url + ". Is server.js running?", true);
+    if (document.pointerLockElement) document.exitPointerLock();
+  };
+}
+
+function netHandle(m) {
+  switch (m.t) {
+    case "welcome":
+      net.id = m.id; net.on = true;
+      for (const o of m.players) addRemote(o);
+      respawnPlayer(new THREE.Vector3(m.spawn[0], 0, m.spawn[1]));
+      feed("Joined as " + m.name);
+      break;
+    case "full": setNote("That server is full.", true); break;
+    case "join": addRemote(m); feed(m.name + " joined"); break;
+    case "leave": removeRemote(m.id); feed(m.name + " left"); break;
+    case "s":
+      for (const a of m.p) {
+        const r = net.remotes.get(a[0]); if (!r) continue;
+        r.tx.set(a[1], a[2], a[3]); r.tyaw = a[4]; r.crouch = !!a[7];
+        if (!r.alive && a[8]) r.pos.copy(r.tx);
+        r.alive = !!a[8];
+      }
+      break;
+    case "shot": {
+      const f = new THREE.Vector3().fromArray(m.f), e = new THREE.Vector3().fromArray(m.e);
+      spawnTracer(f, e, 0xffee88);
+      sfx.botShot(clamp(0.3 - f.distanceTo(camera.position) / 150, 0.03, 0.3));
+      break;
+    }
+    case "dmg":
+      if (m.id !== net.id) break;
+      if (!m.regen) {
+        player.lastHurt = performance.now(); sfx.hurt();
+        const el = $("dmg"); el.style.transition = "none"; el.style.opacity = 0.9;
+        requestAnimationFrame(() => { el.style.transition = "opacity .5s"; el.style.opacity = 0; });
+      }
+      player.hp = m.hp; updateHud();
+      break;
+    case "kill": {
+      const k = m.killer === net.id ? "You" : m.kn, v = m.victim === net.id ? "you" : m.vn;
+      feed(`${k} ${m.head ? "🎯" : "→"} ${v}`);
+      const r = net.remotes.get(m.victim);
+      if (r) { r.alive = false; burst(r.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0xff5555, 18, 6); }
+      if (m.victim === net.id) {
+        player.alive = false; player.hp = 0; player.ads = false; player.deadT = 1e9; mouseDown = false;
+        msg("ELIMINATED BY " + m.kn.toUpperCase());
+        updateHud();
+      }
+      if (m.killer === net.id) {
+        sfx.kill();
+        const a = player.ammo[player.weapon], w = WEAPONS[player.weapon];
+        a.res = Math.min(w.reserve * 2, a.res + Math.ceil(w.mag / 2)); updateHud();
+      }
+      break;
+    }
+    case "spawn":
+      if (m.id === net.id) respawnPlayer(new THREE.Vector3(m.pos[0], 0, m.pos[1]));
+      else { const r = net.remotes.get(m.id); if (r) { r.alive = true; r.pos.set(m.pos[0], 0, m.pos[1]); r.tx.copy(r.pos); } }
+      break;
+    case "board":
+      net.board = m.rows;
+      const me = m.rows.find(x => x.id === net.id);
+      if (me) { player.kills = me.k; player.deaths = me.d; updateHud(); }
+      if ($("board").style.display === "block") showBoard(true);
+      break;
+  }
+}
+
+function showBoard(on) {
+  const el = $("board");
+  if (!on) { el.style.display = "none"; return; }
+  const rows = net.board.slice().sort((a, b) => b.k - a.k || a.d - b.d);
+  el.innerHTML = "<table><tr><th>PLAYER</th><th>KILLS</th><th>DEATHS</th></tr>" +
+    rows.map(r => `<tr class="${r.id === net.id ? "me" : ""}"><td></td><td>${r.k}</td><td>${r.d}</td></tr>`).join("") + "</table>";
+  el.querySelectorAll("tr:not(:first-child)").forEach((tr, i) => { tr.firstChild.textContent = rows[i].name; });
+  el.style.display = "block";
+}
+
+function updateRemotes(dt) {
+  const k = Math.min(1, dt * 12);
+  for (const r of net.remotes.values()) {
+    r.g.visible = r.alive;
+    if (!r.alive) continue;
+    const px = r.pos.x, pz = r.pos.z;
+    r.pos.lerp(r.tx, k);
+    let dy = r.tyaw - r.yaw;
+    while (dy > Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    r.yaw += dy * k;
+    r.g.position.copy(r.pos); r.g.rotation.y = r.yaw;
+    r.g.scale.y = r.crouch ? 0.75 : 1;
+    const sp = Math.hypot(r.pos.x - px, r.pos.z - pz) / Math.max(dt, 0.001);
+    r.walk += dt * Math.min(sp, 10) * 1.2;
+    const sw = sp > 0.5 ? Math.sin(r.walk) * 0.5 : 0;
+    r.legL.rotation.x = sw; r.legR.rotation.x = -sw;
+  }
+}
+
+function netTick(dt) {
+  if (!net.on || net.id === null || !player.alive) return;
+  net.sendT += dt;
+  if (net.sendT < 0.05) return;
+  net.sendT = 0;
+  net.send({ t: "st", x: r2(player.pos.x), y: r2(player.pos.y), z: r2(player.pos.z),
+    yaw: r2(player.yaw), pitch: r2(player.pitch), w: player.weapon, c: player.crouch ? 1 : 0 });
+}
+
 // ---------------------------------------------------------------- input
 const menu = $("menu");
-menu.addEventListener("click", () => {
+const isHttp = location.protocol.startsWith("http");
+$("server").value = (location.protocol === "https:" ? "wss://" : "ws://") + (isHttp && location.host ? location.host : "localhost:3000");
+try { $("pname").value = localStorage.getItem("bs_name") || "Player"; } catch (e) { /* storage unavailable */ }
+function setNote(text, err) { const n = $("note"); n.textContent = text; n.className = err ? "err" : ""; }
+function syncMode() {
+  const mp = $("mode").value === "mp";
+  document.querySelectorAll(".solo-only").forEach(e => e.style.display = mp ? "none" : "");
+  document.querySelectorAll(".mp-only").forEach(e => e.style.display = mp ? "" : "none");
+}
+$("mode").addEventListener("change", syncMode); syncMode();
+
+$("play").addEventListener("click", () => {
   audio().resume();
   sens = parseFloat($("sens").value); diff = parseFloat($("diff").value);
-  renderer.domElement.requestPointerLock();
+  setNote("Fast, blocky arena FPS. Play solo against bots or online with friends.");
+  if ($("mode").value === "mp") {
+    const name = $("pname").value.trim() || "Player";
+    try { localStorage.setItem("bs_name", name); } catch (e) { /* ignore */ }
+    netConnect($("server").value.trim(), name);
+  } else netDisconnect();
+  try {
+    const r = renderer.domElement.requestPointerLock();
+    if (r && r.catch) r.catch(lockFailed);
+  } catch (e) { lockFailed(); }
 });
+function lockFailed() { netDisconnect(); setNote("Mouse capture was blocked. Click Play again, or use a desktop browser.", true); }
+document.addEventListener("pointerlockerror", lockFailed);
 document.addEventListener("pointerlockchange", () => {
   playing = document.pointerLockElement === renderer.domElement;
   menu.style.display = playing ? "none" : "flex";
   $("hud").style.display = playing ? "block" : "none";
-  if (playing && bots.length !== parseInt($("botCount").value)) setBotCount(parseInt($("botCount").value));
+  const mp = $("mode").value === "mp";
+  if (playing) setBotCount(mp ? 0 : parseInt($("botCount").value));
   if (playing && !player.initialised) { player.initialised = true; respawnPlayer(); switchWeapon(0); gunMeshes[0].visible = true; updateHud(); }
-  if (!playing) { mouseDown = false; for (const k in keys) keys[k] = false; }
+  if (!playing) {
+    mouseDown = false; for (const k in keys) keys[k] = false; showBoard(false);
+    if (net.ws) { netDisconnect(); if (!$("note").className) setNote("You left the match. Click Play to rejoin."); }
+  }
 });
 addEventListener("mousemove", e => {
   if (!playing || !player.alive) return;
@@ -700,7 +927,8 @@ addEventListener("wheel", e => {
   switchWeapon((player.weapon + (e.deltaY > 0 ? 1 : -1) + WEAPONS.length) % WEAPONS.length);
 });
 addEventListener("keydown", e => {
-  if (e.code === "Space") e.preventDefault();
+  if (e.code === "Space" || e.code === "Tab") e.preventDefault();
+  if (e.code === "Tab" && playing && net.on) showBoard(true);
   keys[e.code] = true;
   if (!playing) return;
   if (e.code === "KeyR") reload();
@@ -708,7 +936,7 @@ addEventListener("keydown", e => {
   if (e.code === "Digit2") switchWeapon(1);
   if (e.code === "Digit3") switchWeapon(2);
 });
-addEventListener("keyup", e => { keys[e.code] = false; });
+addEventListener("keyup", e => { keys[e.code] = false; if (e.code === "Tab") showBoard(false); });
 
 // ---------------------------------------------------------------- player update
 const ACCEL_GROUND = 70, ACCEL_AIR = 22, FRICTION = 9, GRAVITY = 28, JUMP_V = 9.2;
@@ -716,7 +944,7 @@ const wishDir = new THREE.Vector3();
 function updatePlayer(dt) {
   if (!player.alive) {
     player.deadT -= dt;
-    if (player.deadT <= 0) { respawnPlayer(); }
+    if (player.deadT <= 0 && !net.on) { respawnPlayer(); }
     return;
   }
   // crouch / slide
@@ -822,6 +1050,8 @@ function loop() {
     gameTime += dt;
     updatePlayer(dt);
     updateBots(dt);
+    updateRemotes(dt);
+    netTick(dt);
     updateFx(dt);
     hudT += dt;
     if (hudT > 0.25) {
@@ -830,7 +1060,7 @@ function loop() {
       $("time").textContent = Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0");
       if (player.reloading > 0) updateHud();
       // slow health regen
-      if (player.alive && player.hp < 100 && performance.now() - player.lastHurt > 5000) { player.hp = Math.min(100, player.hp + 3); updateHud(); }
+      if (!net.on && player.alive && player.hp < 100 && performance.now() - player.lastHurt > 5000) { player.hp = Math.min(100, player.hp + 3); updateHud(); }
     }
   } else {
     // idle menu camera orbit
@@ -845,7 +1075,7 @@ function loop() {
 loop();
 
 // expose for debugging/tests
-window.__game = { player, bots, boxes, scene, camera, setBotCount };
+window.__game = { player, bots, boxes, scene, camera, setBotCount, net };
 })();
 </script>
 </body>
