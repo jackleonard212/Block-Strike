@@ -104,10 +104,10 @@
   <table>
     <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
     <tr><td>Space</td><td>Jump (hold to bunny-hop)</td><td>C / Ctrl</td><td>Crouch / slide</td></tr>
-    <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
+    <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim (auto-locks nearest enemy)</td></tr>
     <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
     <tr><td>Tab</td><td>Scoreboard (multiplayer)</td><td>Esc</td><td>Pause / leave match</td></tr>
-    <tr><td>G</td><td>Wallhack (solo)</td><td>H</td><td>Aimbot (solo)</td></tr>
+    <tr><td>G</td><td>Wallhack (solo)</td><td>H</td><td>Aimbot while firing (solo)</td></tr>
   </table>
 </div>
 
@@ -882,7 +882,7 @@ function netTick(dt) {
 }
 
 // ---------------------------------------------------------------- cheats (wallhack / aimbot)
-// Solo: always available (G / H). Multiplayer: only if the server runs with ALLOW_CHEATS=1,
+// Solo: always available (G / H, plus auto-aim on right click). Multiplayer: only if the server runs with ALLOW_CHEATS=1,
 // and every player is told when they join.
 const cheats = { esp: false, aim: false };
 const canCheat = () => !net.on || net.cheats;
@@ -904,7 +904,8 @@ function updateCheats(dt) {
   if (on !== espOn) setEsp(on);
   const aim = cheats.aim && canCheat();
   $("cheats").textContent = [on ? "WALLHACK" : "", aim ? "AIMBOT" : ""].filter(Boolean).join("  ·  ");
-  if (!aim || !player.alive || !(mouseDown || player.ads)) return;
+  // holding right click always snaps to the nearest visible enemy; the H aimbot also works while firing
+  if (!canCheat() || !player.alive || !(player.ads || (aim && mouseDown))) return;
 
   // pick the visible target closest to where we're already looking
   camera.getWorldPosition(eyePos);

@@ -23,7 +23,7 @@ Hold Tab for the scoreboard. Esc leaves the match.
 
 ## Cheats
 
-G toggles a wallhack and H toggles an aimbot (hold fire or aim to lock on to the nearest visible enemy). They always work in solo.
+G toggles a wallhack and H toggles an aimbot (and holding right click always locks on to the nearest visible enemy; H extends the lock to firing too). They always work in solo.
 In multiplayer they're off unless the server runs with `ALLOW_CHEATS=1 node server.js`. Every player is told when they join a server that allows them.
 
 ## Controls
