@@ -21,6 +21,11 @@ Everyone opens `http://<server-ip>:3000` (the server prints its LAN address on s
 The server field fills in automatically. Up to 16 players. Over the internet you need to forward the port or use a tunnel.
 Hold Tab for the scoreboard. Esc leaves the match.
 
+## Cheats
+
+G toggles a wallhack and H toggles an aimbot (hold fire or aim to lock on to the nearest visible enemy). They always work in solo.
+In multiplayer they're off unless the server runs with `ALLOW_CHEATS=1 node server.js`. Every player is told when they join a server that allows them.
+
 ## Controls
 
 WASD move, Shift sprint, Space jump (hold to bunny-hop), C/Ctrl crouch (sprint + crouch = slide),

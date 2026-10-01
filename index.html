@@ -53,6 +53,7 @@
   #menu .opts{flex-wrap:wrap;justify-content:center;padding:0 16px}
   #menu #note{text-align:center;padding:0 16px}
   #menu #note.err{color:#ff7a7a}
+  #cheats{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);font-size:14px;font-weight:800;letter-spacing:2px;color:#ff5577;text-shadow:0 2px 3px #000}
   #board{position:absolute;left:50%;top:18%;transform:translateX(-50%);display:none;min-width:340px;background:rgba(0,0,0,.6);padding:12px 18px;border-radius:6px;font-size:16px}
   #board table{width:100%;border-collapse:collapse}
   #board th{font-size:12px;letter-spacing:2px;opacity:.7;text-align:right;padding:2px 8px}
@@ -71,6 +72,7 @@
   <div id="feed"></div>
   <div id="msg"></div>
   <div id="board"></div>
+  <div id="cheats"></div>
   <div id="bottom"><div id="hpbar"><div id="hpfill"></div></div><div id="hptxt">100</div></div>
   <div id="ammo"><div id="wname">ASSAULT RIFLE</div><div class="n"><span id="mag">30</span> <small>/ <span id="res">120</span></small></div><div id="slots"></div></div>
 </div>
@@ -105,6 +107,7 @@
     <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
     <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
     <tr><td>Tab</td><td>Scoreboard (multiplayer)</td><td>Esc</td><td>Pause / leave match</td></tr>
+    <tr><td>G</td><td>Wallhack (solo)</td><td>H</td><td>Aimbot (solo)</td></tr>
   </table>
 </div>
 
@@ -405,6 +408,7 @@ const botMeshParts = {};
 const botColors = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
 const BOT_NAMES = ["Zed", "Vex", "Nyx", "Rook", "Blitz", "Kilo", "Mako", "Echo", "Jinx", "Onyx", "Pyro", "Quill", "Raze", "Sable", "Tux", "Volt"];
 
+let espOn = false;
 function makeModel(color) {
   const mat = new THREE.MeshLambertMaterial({ color });
   const g = new THREE.Group();
@@ -423,15 +427,24 @@ function makeModel(color) {
   body.userData = { part: "body" }; head.userData = { part: "head" };
   legL.userData = { part: "body" }; legR.userData = { part: "body" };
   g.add(body, head, legL, legR, gun, eyes);
+  // wallhack overlay: drawn on top of everything, hidden unless the cheat is on
+  const esp = [];
+  for (const m of [body, head, legL, legR]) {
+    const fill = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ color: 0xff2d55, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }));
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xff7a93, depthTest: false }));
+    fill.renderOrder = 998; edge.renderOrder = 999;
+    fill.visible = edge.visible = espOn;
+    m.add(fill, edge); esp.push(fill, edge);
+  }
   scene.add(g);
-  return { g, body, head, legL, legR };
+  return { g, body, head, legL, legR, esp };
 }
 
 function makeBot(i) {
   const color = botColors[i % botColors.length];
-  const { g, body, head, legL, legR } = makeModel(color);
+  const { g, body, head, legL, legR, esp } = makeModel(color);
   const bot = {
-    id: i, name: BOT_NAMES[i % BOT_NAMES.length], group: g, legL, legR, body, head,
+    id: i, name: BOT_NAMES[i % BOT_NAMES.length], group: g, esp, legL, legR, body, head,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), onGround: false,
     hp: 100, alive: true, yaw: 0, cd: rand(0.5, 1.5), repath: 0, strafe: Math.random() < 0.5 ? 1 : -1,
     strafeT: rand(1, 2.5), los: false, losT: 0, respawnT: 0, stuck: 0, walk: 0, reactT: 0,
@@ -705,7 +718,7 @@ function updateHud() {
 // The server (server.js) owns health, kills and respawns. Clients send their own
 // position 20x/second and report hits; everything else is relayed.
 const net = {
-  ws: null, on: false, id: null, remotes: new Map(), sendT: 0, board: [],
+  ws: null, on: false, cheats: false, id: null, remotes: new Map(), sendT: 0, board: [],
   send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
 };
 
@@ -717,13 +730,15 @@ function nameTag(text) {
   g.fillStyle = "#fff"; g.fillText(text, 128, 34);
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
   spr.scale.set(1.8, 0.45, 1); spr.position.y = 2.3;
+  spr.renderOrder = 1000;
   return spr;
 }
 
 function addRemote(info) {
   if (info.id === net.id || net.remotes.has(info.id)) return;
   const m = makeModel(info.color || 0x888888);
-  m.g.add(nameTag(info.name));
+  const tag = nameTag(info.name);
+  m.g.add(tag); m.tag = tag; tag.material.depthTest = !espOn;
   const r = Object.assign(m, {
     id: info.id, name: info.name, alive: info.alive !== false, init: true,
     pos: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0), tx: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0),
@@ -740,7 +755,7 @@ function removeRemote(id) {
 
 function netDisconnect() {
   const ws = net.ws;
-  net.ws = null; net.on = false; net.id = null;
+  net.ws = null; net.on = false; net.cheats = false; net.id = null;
   if (ws) { ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null; try { ws.close(); } catch (e) { /* already closed */ } }
   for (const id of [...net.remotes.keys()]) removeRemote(id);
   net.board = [];
@@ -765,7 +780,8 @@ function netConnect(url, name) {
 function netHandle(m) {
   switch (m.t) {
     case "welcome":
-      net.id = m.id; net.on = true;
+      net.id = m.id; net.on = true; net.cheats = !!m.cheats;
+      if (net.cheats) feed("Cheats are enabled on this server (G / H)");
       for (const o of m.players) addRemote(o);
       respawnPlayer(new THREE.Vector3(m.spawn[0], 0, m.spawn[1]));
       feed("Joined as " + m.name);
@@ -865,6 +881,56 @@ function netTick(dt) {
     yaw: r2(player.yaw), pitch: r2(player.pitch), w: player.weapon, c: player.crouch ? 1 : 0 });
 }
 
+// ---------------------------------------------------------------- cheats (wallhack / aimbot)
+// Solo: always available (G / H). Multiplayer: only if the server runs with ALLOW_CHEATS=1,
+// and every player is told when they join.
+const cheats = { esp: false, aim: false };
+const canCheat = () => !net.on || net.cheats;
+
+function setEsp(on) {
+  espOn = on;
+  for (const b of bots) b.esp.forEach(o => o.visible = on);
+  for (const r of net.remotes.values()) { r.esp.forEach(o => o.visible = on); r.tag.material.depthTest = !on; }
+}
+function toggleCheat(name) {
+  if (!canCheat()) { msg("CHEATS ARE DISABLED ON THIS SERVER"); return; }
+  cheats[name] = !cheats[name];
+  feed((name === "esp" ? "Wallhack " : "Aimbot ") + (cheats[name] ? "ON" : "OFF"));
+}
+
+const eyePos = new THREE.Vector3();
+function updateCheats(dt) {
+  const on = cheats.esp && canCheat();
+  if (on !== espOn) setEsp(on);
+  const aim = cheats.aim && canCheat();
+  $("cheats").textContent = [on ? "WALLHACK" : "", aim ? "AIMBOT" : ""].filter(Boolean).join("  ·  ");
+  if (!aim || !player.alive || !(mouseDown || player.ads)) return;
+
+  // pick the visible target closest to where we're already looking
+  camera.getWorldPosition(eyePos);
+  const view = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const targets = [];
+  for (const b of bots) if (b.alive) targets.push(b.pos);
+  for (const r of net.remotes.values()) if (r.alive) targets.push(r.pos);
+  let best = null, bestAng = Math.PI;
+  const aimPoint = new THREE.Vector3();
+  for (const t of targets) {
+    aimPoint.set(t.x, t.y + 1.6, t.z);
+    const to = aimPoint.clone().sub(eyePos).normalize();
+    const ang = Math.acos(clamp(view.dot(to), -1, 1));
+    if (ang < bestAng && hasLOS(eyePos, aimPoint)) { bestAng = ang; best = aimPoint.clone(); }
+  }
+  if (!best) return;
+  const dx = best.x - eyePos.x, dy = best.y - eyePos.y, dz = best.z - eyePos.z;
+  const ty = Math.atan2(-dx, -dz), tp = Math.atan2(dy, Math.hypot(dx, dz));
+  let dyaw = ty - player.yaw;
+  while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+  while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+  const k = Math.min(1, dt * 20);
+  player.yaw += dyaw * k;
+  player.pitch = clamp(player.pitch + (tp - player.pitch) * k, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+}
+
 // ---------------------------------------------------------------- input
 const menu = $("menu");
 const isHttp = location.protocol.startsWith("http");
@@ -929,6 +995,8 @@ addEventListener("wheel", e => {
 addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "Tab") e.preventDefault();
   if (e.code === "Tab" && playing && net.on) showBoard(true);
+  if (playing && e.code === "KeyG") toggleCheat("esp");
+  if (playing && e.code === "KeyH") toggleCheat("aim");
   keys[e.code] = true;
   if (!playing) return;
   if (e.code === "KeyR") reload();
@@ -1049,6 +1117,7 @@ function loop() {
   if (playing) {
     gameTime += dt;
     updatePlayer(dt);
+    updateCheats(dt);
     updateBots(dt);
     updateRemotes(dt);
     netTick(dt);

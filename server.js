@@ -11,6 +11,7 @@ const os = require("os");
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const MAX_PLAYERS = 16;
+const ALLOW_CHEATS = process.env.ALLOW_CHEATS === "1"; // lets clients use wallhack/aimbot; everyone is told on join
 const RESPAWN_MS = 3000;
 const REGEN_DELAY_MS = 5000;
 const COLORS = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
@@ -108,7 +109,7 @@ function onMessage(conn, m) {
       yaw: 0, pitch: 0, w: 0, cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0,
     };
     send(p, {
-      t: "welcome", id, name, spawn: sp,
+      t: "welcome", id, name, spawn: sp, cheats: ALLOW_CHEATS,
       players: [...players.values()].map(o => ({ id: o.id, name: o.name, color: o.color, x: o.x, y: o.y, z: o.z, alive: o.alive })),
     });
     players.set(id, p);
@@ -177,7 +178,7 @@ setInterval(() => {
 }, 50);
 
 server.listen(PORT, () => {
-  console.log(`BLOCKSTRIKE server on port ${PORT}`);
+  console.log(`BLOCKSTRIKE server on port ${PORT}${ALLOW_CHEATS ? " (cheats ENABLED)" : ""}`);
   for (const list of Object.values(os.networkInterfaces()))
     for (const i of list) if (i.family === "IPv4" && !i.internal) console.log(`  LAN:   http://${i.address}:${PORT}`);
   console.log(`  local: http://localhost:${PORT}`);
