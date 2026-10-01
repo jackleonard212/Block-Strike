@@ -71,7 +71,6 @@
   #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
   #dashfill{display:block;height:100%;width:100%;background:#38bdf8}
-  #cheats{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);font-size:14px;font-weight:800;letter-spacing:2px;color:#ff5577;text-shadow:0 2px 3px #000}
   #board{position:absolute;left:50%;top:18%;transform:translateX(-50%);display:none;min-width:340px;background:rgba(0,0,0,.6);padding:12px 18px;border-radius:6px;font-size:16px}
   #board table{width:100%;border-collapse:collapse}
   #board th{font-size:12px;letter-spacing:2px;opacity:.7;text-align:right;padding:2px 8px}
@@ -94,7 +93,6 @@
   <div id="feed"></div>
   <div id="msg"></div>
   <div id="board"></div>
-  <div id="cheats"></div>
   <div id="bottom"><div id="hpbar"><div id="hpfill"></div></div><div id="hptxt">100</div><div id="dash"><span>DASH · Q</span><div id="dashbar"><i id="dashfill"></i></div></div></div>
   <div id="ammo"><div id="wname">ASSAULT RIFLE</div><div class="n"><span id="mag">30</span> <small>/ <span id="res">120</span></small></div><div id="slots"></div></div>
 </div>
@@ -129,7 +127,7 @@
     <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
     <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
     <tr><td>Tab</td><td>Scoreboard (multiplayer)</td><td>Esc</td><td>Pause / leave match</td></tr>
-    <tr><td>Q</td><td>Dash</td><td>G</td><td>Wallhack (solo)</td></tr>
+    <tr><td>Q</td><td>Dash</td><td>4 / V</td><td>Knife (melee, backstab = big damage)</td></tr>
     <tr><td>Cyan pads</td><td>Launch you sky-high</td><td>Pickups</td><td>Green HP, yellow ammo (solo)</td></tr>
   </table>
 </div>
@@ -181,6 +179,8 @@ const sfx = {
   hurt: () => { noise(0.15, 0.4, 500); tone(110, 0.15, 0.3, "sawtooth", -50); },
   reload: () => { tone(300, 0.05, 0.15); setTimeout(() => tone(500, 0.05, 0.15), 350); },
   jump: () => noise(0.08, 0.1, 800),
+  knife: () => { noise(0.14, 0.3, 4500, "highpass"); tone(900, 0.1, 0.08, "sawtooth", -500); },
+  stab: () => { noise(0.1, 0.5, 900); tone(160, 0.12, 0.3, "square", -80); },
   botShot: (vol) => { noise(0.1, vol, 1800); },
   empty: () => tone(200, 0.04, 0.15),
   pad: () => tone(300, 0.3, 0.25, "sine", 700),
@@ -447,6 +447,7 @@ const WEAPONS = [
     spread: 0.065, adsSpread: 0.045, pellets: 9, auto: false, recoil: 0.07, range: 40, adsFov: 70, color: 0x5a3b22 },
   { name: "SNIPER", key: "sniper", dmg: 100, rate: 1.1, mag: 5, reserve: 20, reload: 2.4,
     spread: 0.04, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.09, range: 400, adsFov: 20, color: 0x1b2a1b, scope: true },
+  { name: "KNIFE", key: "knife", melee: true, dmg: 55, backstab: 120, rate: 0.5, range: 2.8, mag: 0, reserve: 0, reload: 0, adsFov: 80, color: 0xcfd8e3 },
 ];
 
 // first-person gun model
@@ -454,6 +455,21 @@ const gunGroup = new THREE.Group();
 camera.add(gunGroup);
 const gunMeshes = WEAPONS.map(w => {
   const g = new THREE.Group();
+  if (w.melee) {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.07, 0.38), new THREE.MeshLambertMaterial({ color: 0xdfe7f1, emissive: 0x334455 }));
+    blade.position.set(0, 0.03, -0.3);
+    const spine = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, 0.38), new THREE.MeshLambertMaterial({ color: 0x8794a5 }));
+    spine.position.set(0, 0.075, -0.3);
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.03), new THREE.MeshLambertMaterial({ color: 0x222222 }));
+    guard.position.set(0, 0, -0.1);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.16), new THREE.MeshLambertMaterial({ color: 0x3a2a1c }));
+    handle.position.set(0, 0, 0);
+    const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.1), new THREE.MeshLambertMaterial({ color: 0xf1c27d }));
+    fist.position.set(0, -0.01, 0.02);
+    g.add(blade, spine, guard, handle, fist);
+    g.visible = false; gunGroup.add(g);
+    return g;
+  }
   const mat = new THREE.MeshLambertMaterial({ color: w.color });
   const len = w.key === "sniper" ? 0.9 : w.key === "shotgun" ? 0.7 : 0.6;
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, len), mat);
@@ -487,7 +503,7 @@ const player = {
   hp: 100, alive: true, crouch: false, sliding: 0,
   kills: 0, deaths: 0,
   weapon: 0, ammo: WEAPONS.map(w => ({ mag: w.mag, res: w.reserve })),
-  reloading: 0, cooldown: 0, ads: false, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0,
+  reloading: 0, cooldown: 0, swingT: 0, prevWeapon: 0, ads: false, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0,
 };
 const R = 0.4, STAND_H = 1.8, CROUCH_H = 1.1;
 const keys = {};
@@ -524,7 +540,6 @@ const botMeshParts = {};
 const botColors = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
 const BOT_NAMES = ["Zed", "Vex", "Nyx", "Rook", "Blitz", "Kilo", "Mako", "Echo", "Jinx", "Onyx", "Pyro", "Quill", "Raze", "Sable", "Tux", "Volt"];
 
-let espOn = false;
 function makeModel(color) {
   const mat = new THREE.MeshLambertMaterial({ color });
   const g = new THREE.Group();
@@ -543,27 +558,18 @@ function makeModel(color) {
   body.userData = { part: "body" }; head.userData = { part: "head" };
   legL.userData = { part: "body" }; legR.userData = { part: "body" };
   g.add(body, head, legL, legR, gun, eyes);
-  // wallhack overlay: drawn on top of everything, hidden unless the cheat is on
-  const esp = [];
-  for (const m of [body, head, legL, legR]) {
-    const fill = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ color: 0xff2d55, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }));
-    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xff7a93, depthTest: false }));
-    fill.renderOrder = 998; edge.renderOrder = 999;
-    fill.visible = edge.visible = espOn;
-    m.add(fill, edge); esp.push(fill, edge);
-  }
   scene.add(g);
-  return { g, body, head, legL, legR, esp };
+  return { g, body, head, legL, legR };
 }
 
 function makeBot(i) {
   const color = botColors[i % botColors.length];
-  const { g, body, head, legL, legR, esp } = makeModel(color);
+  const { g, body, head, legL, legR } = makeModel(color);
   const name = BOT_NAMES[i % BOT_NAMES.length];
   const tag = nameTag(name);
-  tag.material.depthTest = !espOn; g.add(tag);
+  g.add(tag);
   const bot = {
-    id: i, name, group: g, esp, tag, kills: 0, deaths: 0, lastShot: -1e9, legL, legR, body, head,
+    id: i, name, group: g, kills: 0, deaths: 0, lastShot: -1e9, legL, legR, body, head,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), onGround: false,
     hp: 100, alive: true, yaw: 0, cd: rand(0.5, 1.5), repath: 0, strafe: Math.random() < 0.5 ? 1 : -1,
     strafeT: rand(1, 2.5), los: false, losT: 0, respawnT: 0, stuck: 0, walk: 0, reactT: 0,
@@ -711,6 +717,7 @@ function botMeshes() {
 function shoot() {
   const w = WEAPONS[player.weapon], a = player.ammo[player.weapon];
   if (player.reloading > 0 || player.cooldown > 0 || !player.alive || matchOverT > 0) return;
+  if (w.melee) { knifeSwing(w); return; }
   if (a.mag <= 0) { sfx.empty(); player.cooldown = 0.25; if (a.res > 0) reload(); return; }
   a.mag--; player.cooldown = w.rate;
   sfx[w.key]();
@@ -772,8 +779,36 @@ function shoot() {
 }
 function reload() {
   const w = WEAPONS[player.weapon], a = player.ammo[player.weapon];
-  if (player.reloading > 0 || a.mag >= w.mag || a.res <= 0 || !player.alive) return;
+  if (w.melee || player.reloading > 0 || a.mag >= w.mag || a.res <= 0 || !player.alive) return;
   player.reloading = w.reload; player.ads = false; sfx.reload();
+}
+const fwdV = new THREE.Vector3();
+function knifeSwing(w) {
+  player.cooldown = w.rate; player.swingT = 0.28; sfx.knife();
+  const origin = camera.getWorldPosition(new THREE.Vector3());
+  fwdV.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+  ray.set(origin, fwdV); ray.far = w.range;
+  const hit = ray.intersectObjects(botMeshes().concat(wallMeshes), false)[0];
+  if (!hit) return;
+  const bot = hit.object.userData.bot, rem = hit.object.userData.remote;
+  if (!bot && !rem) { burst(hit.point, 0xdddddd, 4, 2); return; }
+  const target = bot || rem;
+  // backstab: the target is facing roughly the same way we are looking
+  const tf = new THREE.Vector3(-Math.sin(target.yaw), 0, -Math.cos(target.yaw));
+  const back = tf.dot(fwdV.clone().setY(0).normalize()) > 0.35;
+  const dmg = back ? w.backstab : w.dmg;
+  sfx.stab(); shake = Math.min(1, shake + 0.35);
+  burst(hit.point, 0xcc2222, 8, 4);
+  dmgNumber(target.pos.clone().setY(target.pos.y + 2), dmg, back);
+  if (back) banner("BACKSTAB");
+  if (bot) {
+    bot.hp -= dmg;
+    showHitMarker(bot.hp <= 0);
+    if (bot.hp <= 0) killBot(bot, back);
+  } else {
+    net.send({ t: "hit", id: rem.id, dmg, head: back });
+    showHitMarker(false);
+  }
 }
 function finishReload() {
   const w = WEAPONS[player.weapon], a = player.ammo[player.weapon];
@@ -837,7 +872,7 @@ function updateHud() {
   $("hpfill").style.width = player.hp + "%";
   $("hpfill").style.background = player.hp > 50 ? "#4ade80" : player.hp > 25 ? "#facc15" : "#ef4444";
   $("hptxt").textContent = Math.ceil(player.hp);
-  $("mag").textContent = a.mag; $("res").textContent = a.res;
+  $("mag").textContent = w.melee ? "—" : a.mag; $("res").textContent = w.melee ? "∞" : a.res;
   $("wname").textContent = w.name + (player.reloading > 0 ? "  (RELOADING)" : "");
   $("kills").textContent = player.kills; $("deaths").textContent = player.deaths;
   $("slots").innerHTML = WEAPONS.map((x, i) => i === player.weapon ? `<b>[${i + 1}] ${x.key}</b>` : `[${i + 1}] ${x.key}`).join("  ");
@@ -938,10 +973,10 @@ function drawMinimap() {
   mctx.save();
   mctx.beginPath(); mctx.arc(c, c, c - 1, 0, Math.PI * 2); mctx.clip();
   if (!net.on) for (const p of pickups) if (p.t <= 0) dot(p.x, p.z, p.kind === "hp" ? "#4ade80" : "#facc15", 3);
-  // enemies show while they can see you, just fired, or when the wallhack is on
+  // enemies show while they can see you or just fired
   const now = performance.now();
-  for (const b of bots) if (b.alive && (b.los || espOn || now - b.lastShot < 1500)) dot(b.pos.x, b.pos.z, "#ff4d4d", 4);
-  for (const r of net.remotes.values()) if (r.alive && (r.vis || espOn || now - r.lastShot < 1500)) dot(r.pos.x, r.pos.z, "#ff4d4d", 4);
+  for (const b of bots) if (b.alive && (b.los || now - b.lastShot < 1500)) dot(b.pos.x, b.pos.z, "#ff4d4d", 4);
+  for (const r of net.remotes.values()) if (r.alive && (r.vis || now - r.lastShot < 1500)) dot(r.pos.x, r.pos.z, "#ff4d4d", 4);
   // view cone and you
   mctx.fillStyle = "rgba(255,255,255,.16)";
   mctx.beginPath(); mctx.moveTo(c, c); mctx.arc(c, c, c, -Math.PI / 2 - 0.7, -Math.PI / 2 + 0.7); mctx.closePath(); mctx.fill();
@@ -976,7 +1011,7 @@ function updateWorld(dt) {
 // The server (server.js) owns health, kills and respawns. Clients send their own
 // position 20x/second and report hits; everything else is relayed.
 const net = {
-  ws: null, on: false, cheats: false, id: null, remotes: new Map(), sendT: 0, board: [],
+  ws: null, on: false, id: null, remotes: new Map(), sendT: 0, board: [],
   send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
 };
 
@@ -996,7 +1031,7 @@ function addRemote(info) {
   if (info.id === net.id || net.remotes.has(info.id)) return;
   const m = makeModel(info.color || 0x888888);
   const tag = nameTag(info.name);
-  m.g.add(tag); m.tag = tag; tag.material.depthTest = !espOn;
+  m.g.add(tag);
   const r = Object.assign(m, {
     id: info.id, name: info.name, alive: info.alive !== false, init: true,
     pos: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0), tx: new THREE.Vector3(info.x || 0, info.y || 0, info.z || 0),
@@ -1013,7 +1048,7 @@ function removeRemote(id) {
 
 function netDisconnect() {
   const ws = net.ws;
-  net.ws = null; net.on = false; net.cheats = false; net.id = null;
+  net.ws = null; net.on = false; net.id = null;
   if (ws) { ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null; try { ws.close(); } catch (e) { /* already closed */ } }
   for (const id of [...net.remotes.keys()]) removeRemote(id);
   net.board = [];
@@ -1038,8 +1073,7 @@ function netConnect(url, name) {
 function netHandle(m) {
   switch (m.t) {
     case "welcome":
-      net.id = m.id; net.on = true; net.cheats = !!m.cheats;
-      if (net.cheats) feed("Cheats are enabled on this server (G / H)");
+      net.id = m.id; net.on = true;
       for (const o of m.players) addRemote(o);
       respawnPlayer(new THREE.Vector3(m.spawn[0], 0, m.spawn[1]));
       feed("Joined as " + m.name);
@@ -1149,28 +1183,6 @@ function netTick(dt) {
     yaw: r2(player.yaw), pitch: r2(player.pitch), w: player.weapon, c: player.crouch ? 1 : 0 });
 }
 
-// ---------------------------------------------------------------- wallhack (G)
-// Solo: always available. Multiplayer: only if the server runs with ALLOW_CHEATS=1,
-// and every player is told when they join.
-const cheats = { esp: false };
-const canCheat = () => !net.on || net.cheats;
-
-function setEsp(on) {
-  espOn = on;
-  for (const b of bots) { b.esp.forEach(o => o.visible = on); b.tag.material.depthTest = !on; }
-  for (const r of net.remotes.values()) { r.esp.forEach(o => o.visible = on); r.tag.material.depthTest = !on; }
-}
-function toggleWallhack() {
-  if (!canCheat()) { msg("CHEATS ARE DISABLED ON THIS SERVER"); return; }
-  cheats.esp = !cheats.esp;
-  feed("Wallhack " + (cheats.esp ? "ON" : "OFF"));
-}
-function updateCheats() {
-  const on = cheats.esp && canCheat();
-  if (on !== espOn) setEsp(on);
-  $("cheats").textContent = on ? "WALLHACK" : "";
-}
-
 // ---------------------------------------------------------------- input
 const menu = $("menu");
 const isHttp = location.protocol.startsWith("http");
@@ -1221,7 +1233,7 @@ addEventListener("mousemove", e => {
 addEventListener("mousedown", e => {
   if (!playing) return;
   if (e.button === 0) { mouseDown = true; shoot(); }
-  if (e.button === 2 && player.reloading <= 0) player.ads = true;
+  if (e.button === 2 && player.reloading <= 0 && !WEAPONS[player.weapon].melee) player.ads = true;
 });
 addEventListener("mouseup", e => {
   if (e.button === 0) mouseDown = false;
@@ -1235,13 +1247,14 @@ addEventListener("wheel", e => {
 addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "Tab") e.preventDefault();
   if (e.code === "Tab" && playing) showBoard(true);
-  if (playing && e.code === "KeyG") toggleWallhack();
   keys[e.code] = true;
   if (!playing) return;
   if (e.code === "KeyR") reload();
   if (e.code === "Digit1") switchWeapon(0);
   if (e.code === "Digit2") switchWeapon(1);
   if (e.code === "Digit3") switchWeapon(2);
+  if (e.code === "Digit4") switchWeapon(3);
+  if (e.code === "KeyV") { if (player.weapon === 3) switchWeapon(player.prevWeapon); else { player.prevWeapon = player.weapon; switchWeapon(3); } }
   if (e.code === "KeyQ" && !e.repeat) dash();
 });
 addEventListener("keyup", e => { keys[e.code] = false; if (e.code === "Tab" && matchOverT <= 0) showBoard(false); });
@@ -1366,7 +1379,11 @@ function updateCamera(dt) {
   const target = player.ads ? GUN_ADS : GUN_HIP;
   gunGroup.position.lerp(target, Math.min(1, dt * 16));
   gunGroup.position.z += player.recoilKick * 1.2;
-  gunGroup.rotation.x = player.recoilKick * 2 + (player.reloading > 0 ? -0.8 * Math.sin((1 - player.reloading / w.reload) * Math.PI) : 0);
+  player.swingT = Math.max(0, player.swingT - dt);
+  const swing = player.swingT > 0 ? Math.sin((1 - player.swingT / 0.28) * Math.PI) : 0;
+  gunGroup.position.x -= swing * 0.25; gunGroup.position.z -= swing * 0.15;
+  gunGroup.rotation.z = -swing * 1.2;
+  gunGroup.rotation.x = player.recoilKick * 2 - swing * 0.7 + (player.reloading > 0 ? -0.8 * Math.sin((1 - player.reloading / w.reload) * Math.PI) : 0);
   gunGroup.visible = player.alive && !(scoped && fovCur < 30);
   $("scope").style.display = scoped && fovCur < 30 ? "block" : "none";
   $("crosshair").style.display = player.ads ? "none" : "block";
@@ -1381,7 +1398,6 @@ function loop() {
   if (playing) {
     gameTime += dt;
     updatePlayer(dt);
-    updateCheats();
     updateBots(dt);
     updateRemotes(dt);
     netTick(dt);
