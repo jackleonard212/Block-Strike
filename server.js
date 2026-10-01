@@ -11,7 +11,7 @@ const os = require("os");
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const MAX_PLAYERS = 16;
-const ALLOW_CHEATS = process.env.ALLOW_CHEATS === "1"; // lets clients use wallhack/aimbot; everyone is told on join
+const ALLOW_CHEATS = process.env.ALLOW_CHEATS === "1"; // lets clients use the wallhack; everyone is told on join
 const RESPAWN_MS = 3000;
 const REGEN_DELAY_MS = 5000;
 const COLORS = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];

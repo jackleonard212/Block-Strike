@@ -21,12 +21,18 @@ Everyone opens `http://<server-ip>:3000` (the server prints its LAN address on s
 The server field fills in automatically. Up to 16 players. Over the internet you need to forward the port or use a tunnel.
 Hold Tab for the scoreboard. Esc leaves the match.
 
-## Cheats
+## Wallhack
 
-G toggles a wallhack and H toggles an aimbot (and holding right click always locks on to the nearest visible enemy; H extends the lock to firing too). They always work in solo.
-In multiplayer they're off unless the server runs with `ALLOW_CHEATS=1 node server.js`. Every player is told when they join a server that allows them.
+G toggles a wallhack. It always works in solo. In multiplayer it's off unless the server runs with `ALLOW_CHEATS=1 node server.js`, and every player is told when they join a server that allows it.
+
+## Features
+
+- Minimap (top left) that rotates with you. Enemies show up on it while they can see you or just fired.
+- Live leaderboard under the minimap, Tab for the full scoreboard. Solo is first to 25 kills, then the match resets.
+- Kill streaks, multi-kill banners, floating damage numbers, screen shake.
+- Dash (Q), cyan jump pads, and health and ammo pickups (solo).
 
 ## Controls
 
 WASD move, Shift sprint, Space jump (hold to bunny-hop), C/Ctrl crouch (sprint + crouch = slide),
-Mouse1 shoot, Mouse2 aim, R reload, 1/2/3 or wheel switch weapon.
+Mouse1 shoot, Mouse2 aim, R reload, 1/2/3 or wheel switch weapon, Q dash, Tab scoreboard.
