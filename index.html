@@ -1255,6 +1255,10 @@ function netTick(dt) {
 const menu = $("menu");
 const isHttp = location.protocol.startsWith("http");
 $("server").value = (location.protocol === "https:" ? "wss://" : "ws://") + (isHttp && location.host ? location.host : "localhost:3000");
+if (/github\.io$/.test(location.hostname)) {   // static hosting has no game server behind it
+  $("server").value = ""; $("server").placeholder = "wss://your-server-address";
+  setNote("Pick Solo (bots) to play now. Multiplayer needs your own server running server.js.");
+}
 try { $("pname").value = localStorage.getItem("bs_name") || "Player"; } catch (e) { /* storage unavailable */ }
 function setNote(text, err) { const n = $("note"); n.textContent = text; n.className = err ? "err" : ""; }
 function syncMode() {
