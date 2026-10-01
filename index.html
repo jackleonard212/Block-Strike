@@ -51,7 +51,7 @@
   #lb .r span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   #lb .r span:nth-child(n+3){text-align:right}
   #lb .sep{border-top:1px dashed rgba(255,255,255,.25);margin:3px 0}
-  #banner{position:absolute;left:50%;top:30%;transform:translate(-50%,0);font-size:54px;font-weight:900;letter-spacing:6px;color:#fff;text-shadow:0 0 18px #f472b6,0 4px 8px #000;opacity:0;white-space:nowrap}
+  #banner{position:absolute;left:50%;top:30%;transform:translate(-50%,0);font-size:clamp(26px,4.6vw,54px);max-width:96vw;font-weight:900;letter-spacing:6px;color:#fff;text-shadow:0 0 18px #f472b6,0 4px 8px #000;opacity:0;white-space:nowrap}
   #banner.pop{animation:pop 1.6s ease-out forwards}
   @keyframes pop{0%{opacity:0;transform:translate(-50%,10px) scale(.4)}12%{opacity:1;transform:translate(-50%,0) scale(1.15)}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px) scale(1)}}
   #dn{position:absolute;inset:0;overflow:hidden}
@@ -147,6 +147,17 @@
   #menu .chip.on{border-color:var(--amber);background:rgba(255,176,32,.12)}
   #menu .chip:disabled{opacity:.5;cursor:default}
   .dn.coinpop{color:#ffb020;font-size:22px}
+  #round{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:none;text-align:center;text-shadow:0 2px 4px #000}
+  #round .rrow{display:flex;gap:22px;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:6px 24px;font-size:26px;font-weight:800}
+  #round .tT{color:#ffb648}
+  #round .tCT{color:#6fa8ff}
+  #round #rtime{font-size:30px;min-width:70px;font-variant-numeric:tabular-nums}
+  #round #rtime.hot{color:#ff4040}
+  #rstatus{margin-top:4px;font-size:13px;letter-spacing:2px;font-weight:700;background:rgba(0,0,0,.35);padding:3px 12px;display:inline-block}
+  #action{position:absolute;left:50%;top:62%;transform:translateX(-50%);display:none;text-align:center;font-size:22px;font-weight:800;letter-spacing:3px;text-shadow:0 2px 4px #000}
+  #actionBar{width:260px;height:10px;background:rgba(0,0,0,.55);border:2px solid #000;margin:8px auto 0}
+  #actionFill{display:block;height:100%;width:0;background:#ffd23c}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
   #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
   #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
@@ -170,6 +181,9 @@
   <div id="lb"></div>
   <div id="dn"></div>
   <div id="fps"></div>
+  <div id="round"><div class="rrow"><span class="tT">T <b id="scT">0</b></span><span id="rtime">0:00</span><span class="tCT"><b id="scCT">0</b> CT</span></div><div id="rstatus"></div></div>
+  <div id="action"><div id="actionLbl"></div><div id="actionBar"><i id="actionFill"></i></div></div>
+  <div id="flash"></div>
   <div id="banner"></div>
   <div id="score"><span>KILLS <b id="kills">0</b></span><span>DEATHS <b id="deaths">0</b></span><span>COINS <b id="coinHud">0</b></span><span>⏱ <b id="time">0:00</b></span></div>
   <div id="feed"></div>
@@ -201,13 +215,20 @@
       <div class="card solo-only">
         <div class="h2">Match settings</div>
         <div class="row">
-          <label>BOTS
+          <label>GAME MODE
+            <select id="gameMode"><option value="ffa" selected>Free for all</option><option value="bomb">Bomb defusal · 5v5</option></select>
+          </label>
+          <label class="bomb-only">YOUR TEAM
+            <select id="team"><option value="RANDOM">Random</option><option value="T">Terrorists (plant)</option><option value="CT">Counter-terrorists (defuse)</option></select>
+          </label>
+          <label class="ffa-only">BOTS
             <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
           </label>
           <label>DIFFICULTY
             <select id="diff"><option value="0.6">Easy</option><option value="1" selected>Normal</option><option value="1.5">Hard</option></select>
           </label>
         </div>
+        <div class="hint bomb-only" style="margin-top:10px">You and 4 bots against 5 bots. Terrorists plant the bomb at site A or B (hold E), counter-terrorists stop them or defuse it (hold E). First team to 5 rounds wins.</div>
       </div>
       <div id="rooms" class="card mp-only">
         <div class="h2">Play with friends · nothing to install</div>
@@ -282,6 +303,7 @@
           <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
           <tr><td>Tab</td><td>Scoreboard</td><td>Esc</td><td>Pause / leave match</td></tr>
           <tr><td>Q</td><td>Dash</td><td>4 / V</td><td>Knife (backstab = big damage)</td></tr>
+          <tr><td>E (hold)</td><td>Plant or defuse the bomb</td><td></td><td></td></tr>
           <tr><td>Cyan pads</td><td>Launch you sky-high</td><td>Pickups</td><td>Green HP, yellow ammo (solo)</td></tr>
         </table>
       </div>
@@ -343,6 +365,11 @@ const sfx = {
   botShot: (vol) => { noise(0.1, vol, 1800); },
   empty: () => tone(200, 0.04, 0.15),
   pad: () => tone(300, 0.3, 0.25, "sine", 700),
+  plant: () => { tone(700, 0.12, 0.3, "square"); setTimeout(() => tone(1100, 0.25, 0.3, "square"), 140); },
+  beep: () => tone(1400, 0.07, 0.25, "square"),
+  defuse: () => { tone(500, 0.1, 0.25, "triangle", 500); setTimeout(() => tone(900, 0.3, 0.3, "triangle", 300), 120); },
+  boom: () => { noise(1.4, 1.0, 400); tone(50, 0.9, 0.7, "sawtooth", -30); },
+  roundwin: () => { tone(600, 0.15, 0.25, "square", 300); setTimeout(() => tone(900, 0.3, 0.25, "square", 200), 160); },
   dash: () => noise(0.22, 0.35, 3500, "highpass"),
   pickup: () => { tone(700, 0.08, 0.2, "triangle", 300); setTimeout(() => tone(1100, 0.1, 0.2, "triangle"), 70); },
   streak: () => { tone(500, 0.12, 0.25, "square", 300); setTimeout(() => tone(800, 0.18, 0.25, "square", 500), 110); },
@@ -692,23 +719,34 @@ const MOUNT = {
 // returns the height of the aim point, so aiming down sights can line it up with the screen centre
 function addSight(g, key, sight) {
   const m = MOUNT[key], DARK = 0x15171a;
-  if (sight === "reddot") {
-    gunBox(g, 0.045, 0.022, 0.06, 0, m.rail + 0.011, m.z, DARK);
-    gunBox(g, 0.006, 0.034, 0.06, -0.02, m.rail + 0.039, m.z, DARK);
-    gunBox(g, 0.006, 0.034, 0.06, 0.02, m.rail + 0.039, m.z, DARK);
-    gunBox(g, 0.046, 0.006, 0.06, 0, m.rail + 0.059, m.z, DARK);
-    const y = m.rail + 0.04;
-    gunBox(g, 0.005, 0.005, 0.004, 0, y, m.z - 0.02, 0xff2a2a, { basic: true });   // the dot
+  if (sight === "reddot") {   // reflex sight: wide octagonal base, thin arched hood, tiny orange dot
+    const y0 = m.rail, z0 = m.z;
+    gunBox(g, 0.075, 0.028, 0.07, 0, y0 + 0.014, z0, DARK);
+    gunBox(g, 0.05, 0.028, 0.095, 0, y0 + 0.014, z0, DARK);
+    gunBox(g, 0.062, 0.006, 0.062, 0, y0 + 0.031, z0, 0x2a2e35);                       // top plate
+    gunBox(g, 0.008, 0.005, 0.005, 0.026, y0 + 0.02, z0 + 0.049, 0xff2a2a, { basic: true });   // power LED
+    const zr = z0 + 0.02;
+    gunBox(g, 0.005, 0.03, 0.006, -0.027, y0 + 0.045, zr, DARK);                       // hood posts
+    gunBox(g, 0.005, 0.03, 0.006, 0.027, y0 + 0.045, zr, DARK);
+    for (let i = 0; i <= 12; i++) { const a = Math.PI * i / 12; gunBox(g, 0.0055, 0.0055, 0.006, Math.cos(a) * 0.027, y0 + 0.06 + Math.sin(a) * 0.027, zr, DARK); }   // the arch
+    const y = y0 + 0.055;
+    gunBox(g, 0.0045, 0.0045, 0.004, 0, y, z0 - 0.005, 0xff6a30, { basic: true });     // the dot
     return y;
   }
-  if (sight === "holo") {
-    gunBox(g, 0.05, 0.022, 0.07, 0, m.rail + 0.011, m.z, DARK);
-    gunBox(g, 0.006, 0.046, 0.07, -0.022, m.rail + 0.045, m.z, DARK);
-    gunBox(g, 0.006, 0.046, 0.07, 0.022, m.rail + 0.045, m.z, DARK);
-    gunBox(g, 0.05, 0.006, 0.07, 0, m.rail + 0.071, m.z, DARK);
-    const y = m.rail + 0.046;
-    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; gunBox(g, 0.004, 0.004, 0.003, Math.cos(a) * 0.012, y + Math.sin(a) * 0.012, m.z - 0.025, 0x4af0ff, { basic: true }); }
-    gunBox(g, 0.004, 0.004, 0.003, 0, y, m.z - 0.025, 0x4af0ff, { basic: true });
+  if (sight === "holo") {   // holographic sight: thick rectangular frame, wide window, ring-and-ticks reticle
+    const y0 = m.rail, z0 = m.z, EDGE = 0x6c7078, GREEN = 0x33ff55;
+    gunBox(g, 0.07, 0.026, 0.1, 0, y0 + 0.013, z0, DARK);                              // lower housing
+    gunBox(g, 0.07, 0.008, 0.085, 0, y0 + 0.03, z0, DARK);                             // bottom bar
+    gunBox(g, 0.07, 0.009, 0.085, 0, y0 + 0.0725, z0, DARK);                           // top bar
+    gunBox(g, 0.01, 0.052, 0.085, -0.03, y0 + 0.05, z0, DARK);                         // sides
+    gunBox(g, 0.01, 0.052, 0.085, 0.03, y0 + 0.05, z0, DARK);
+    gunBox(g, 0.07, 0.0015, 0.085, 0, y0 + 0.0775, z0, EDGE);                          // bright top edge
+    gunBox(g, 0.016, 0.009, 0.003, -0.016, y0 + 0.013, z0 + 0.0515, 0x2f333a);         // buttons
+    gunBox(g, 0.016, 0.009, 0.003, 0.016, y0 + 0.013, z0 + 0.0515, 0x2f333a);
+    const y = y0 + 0.0505, rz = z0 - 0.03;
+    for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10; gunBox(g, 0.0022, 0.0022, 0.002, Math.cos(a) * 0.009, y + Math.sin(a) * 0.009, rz, GREEN, { basic: true }); }   // ring
+    for (const [dx, dy, w, h] of [[0, 0.0125, 0.0022, 0.005], [0, -0.0125, 0.0022, 0.005], [0.0125, 0, 0.005, 0.0022], [-0.0125, 0, 0.005, 0.0022]]) gunBox(g, w, h, 0.002, dx, y + dy, rz, GREEN, { basic: true });   // ticks
+    gunBox(g, 0.0025, 0.0025, 0.002, 0, y, rz, GREEN, { basic: true });                // centre dot
     return y;
   }
   if (sight === "acog") {
@@ -954,40 +992,319 @@ for (let cz = 0; cz < NAV_N; cz++) for (let cx = 0; cx < NAV_N; cx++) {
   const x0 = cx - ARENA - 0.45, x1 = cx - ARENA + 1.45, z0 = cz - ARENA - 0.45, z1 = cz - ARENA + 1.45;
   for (const b of boxes) if (b.max.y > 0.6 && x1 > b.min.x && x0 < b.max.x && z1 > b.min.z && z0 < b.max.z) { navBlocked[cz * NAV_N + cx] = 1; break; }
 }
-let navCell = -1, navT = 0;
-function updateFlow(dt) {
-  navT -= dt;
-  const cx = clamp(Math.floor(player.pos.x + ARENA), 0, NAV_N - 1), cz = clamp(Math.floor(player.pos.z + ARENA), 0, NAV_N - 1), idx = cz * NAV_N + cx;
-  if (idx === navCell || navT > 0) return;
-  navCell = idx; navT = 0.3;
-  navDist.fill(-1);
+function bfsField(start, dist) {   // walking distance from one cell to every other cell
+  dist.fill(-1);
   let h = 0, t = 0;
-  navQ[t++] = idx; navDist[idx] = 0;
+  navQ[t++] = start; dist[start] = 0;
   while (h < t) {
-    const c = navQ[h++], x = c % NAV_N, z = (c / NAV_N) | 0, d = navDist[c] + 1;
+    const c = navQ[h++], x = c % NAV_N, z = (c / NAV_N) | 0, d = dist[c] + 1;
     for (let k = 0; k < 8; k++) {
       const nx = x + NAV_DX[k], nz = z + NAV_DZ[k];
       if (nx < 0 || nz < 0 || nx >= NAV_N || nz >= NAV_N) continue;
       const q = nz * NAV_N + nx;
-      if (navDist[q] >= 0 || navBlocked[q]) continue;
+      if (dist[q] >= 0 || navBlocked[q]) continue;
       if (k >= 4 && (navBlocked[z * NAV_N + nx] || navBlocked[nz * NAV_N + x])) continue;
-      navDist[q] = d; navQ[t++] = q;
+      dist[q] = d; navQ[t++] = q;
     }
   }
 }
-// centre of the neighbouring cell that is closest to the player by walking distance
-function flowStep(b) {
+const cellOf = (x, z) => clamp(Math.floor(z + ARENA), 0, NAV_N - 1) * NAV_N + clamp(Math.floor(x + ARENA), 0, NAV_N - 1);
+let navCell = -1, navT = 0;
+function updateFlow(dt) {   // field that leads toward the player
+  navT -= dt;
+  const idx = cellOf(player.pos.x, player.pos.z);
+  if (idx === navCell || navT > 0) return;
+  navCell = idx; navT = 0.3;
+  bfsField(idx, navDist);
+}
+// centre of the neighbouring cell that is closest to the goal of the given field
+function flowStep(b, dist) {
+  dist = dist || navDist;
   const x = clamp(Math.floor(b.pos.x + ARENA), 0, NAV_N - 1), z = clamp(Math.floor(b.pos.z + ARENA), 0, NAV_N - 1), c = z * NAV_N + x;
-  let best = navDist[c] >= 0 ? navDist[c] : 1e9, bx = -1, bz = -1;
+  let best = dist[c] >= 0 ? dist[c] : 1e9, bx = -1, bz = -1;
   for (let k = 0; k < 8; k++) {
     const nx = x + NAV_DX[k], nz = z + NAV_DZ[k];
     if (nx < 0 || nz < 0 || nx >= NAV_N || nz >= NAV_N) continue;
-    const d = navDist[nz * NAV_N + nx];
+    const d = dist[nz * NAV_N + nx];
     if (d < 0 || d >= best) continue;
     if (k >= 4 && (navBlocked[z * NAV_N + nx] || navBlocked[nz * NAV_N + x])) continue;
     best = d; bx = nx; bz = nz;
   }
   return bx < 0 ? null : { x: bx - ARENA + 0.5, z: bz - ARENA + 0.5 };
+}
+
+// ---------------------------------------------------------------- team mode: bomb defusal (5v5)
+// T (terrorists) plant the bomb at site A or B, CT (counter-terrorists) stop them. You + 4 bots against 5 bots.
+const TEAM_COLOR = { T: 0xd9922e, CT: 0x3b6fd4 }, TEAM_CSS = { T: "#ffb648", CT: "#6fa8ff" };
+const SITES = { A: { x: 42, z: -24, r: 7 }, B: { x: -42, z: -24, r: 7 } };
+const TEAM_SPAWN_IDX = { T: [0, 1, 2, 3, 4], CT: [7, 8, 9, 10, 11] };
+const ROUND = { freeze: 4, live: 100, bomb: 35, plant: 3.2, defuse: 6, end: 5, toWin: 5 };
+const round = { active: false, phase: "off", t: 0, no: 0, score: { T: 0, CT: 0 }, bomb: null, carrier: null, plantP: 0, busy: false, hint: "", prog: 0, tSite: "A", matchOver: false, chosen: "" };
+const siteField = { A: new Int16Array(NAV_N * NAV_N), B: new Int16Array(NAV_N * NAV_N) };
+bfsField(cellOf(SITES.A.x, SITES.A.z), siteField.A);
+bfsField(cellOf(SITES.B.x, SITES.B.z), siteField.B);
+
+// markers on the ground and floating letters so you can find the sites
+const siteGroup = new THREE.Group();
+siteGroup.visible = false;
+scene.add(siteGroup);
+for (const k of ["A", "B"]) {
+  const st = SITES[k];
+  const ring = new THREE.Mesh(new THREE.RingGeometry(st.r - 0.35, st.r, 48), new THREE.MeshBasicMaterial({ color: 0xffd23c, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(st.x, 0.06, st.z);
+  const fill = new THREE.Mesh(new THREE.CircleGeometry(st.r, 48), new THREE.MeshBasicMaterial({ color: 0xffd23c, transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false }));
+  fill.rotation.x = -Math.PI / 2; fill.position.set(st.x, 0.05, st.z);
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+  const cg = cv.getContext("2d");
+  cg.font = "bold 100px Rajdhani, Segoe UI, sans-serif"; cg.textAlign = "center"; cg.textBaseline = "middle";
+  cg.lineWidth = 10; cg.strokeStyle = "rgba(0,0,0,.7)"; cg.strokeText(k, 64, 68);
+  cg.fillStyle = "#ffd23c"; cg.fillText(k, 64, 68);
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+  label.scale.set(5, 5, 1); label.position.set(st.x, 6, st.z);
+  siteGroup.add(ring, fill, label);
+}
+
+const teamAliveCount = team => {
+  let n = 0;
+  for (const b of bots) if (b.alive && b.team === team) n++;
+  if (player.team === team && player.alive) n++;
+  return n;
+};
+const siteAt = pos => { for (const k of ["A", "B"]) if (Math.hypot(pos.x - SITES[k].x, pos.z - SITES[k].z) <= SITES[k].r) return k; return null; };
+
+// recolour a bot for its team (or back to its own colour outside team mode)
+function setBotLook(b) {
+  const col = round.active ? TEAM_COLOR[b.team] : botColors[b.id % botColors.length];
+  b.color = col;
+  b.body.material.color.setHex(col); b.helmet.material.color.setHex(col);
+  equipModel(b, "rifle");
+  b.group.remove(b.tag);
+  b.tag = nameTag(b.name, round.active ? (b.team === player.team ? "#7dffa0" : "#ff8a7a") : "#fff");
+  b.group.add(b.tag);
+  b.tag.material.depthTest = true;
+}
+
+function startTeamMode() {
+  const chosen = $("team").value;
+  player.team = chosen === "RANDOM" ? (Math.random() < 0.5 ? "T" : "CT") : chosen;
+  round.active = true; round.chosen = chosen; round.score = { T: 0, CT: 0 }; round.no = 0; round.matchOver = false;
+  setBotCount(9);
+  const mine = player.team, other = mine === "T" ? "CT" : "T";
+  bots.forEach((b, i) => { b.team = i < 4 ? mine : other; setBotLook(b); });
+  $("score").style.display = "none"; $("round").style.display = "block";
+  siteGroup.visible = true;
+  nextRound();
+}
+function endTeamMode() {
+  round.active = false; round.phase = "off"; removeBomb(); round.bomb = null; round.carrier = null; round.busy = false; round.hint = "";
+  player.team = null;
+  $("score").style.display = ""; $("round").style.display = "none"; $("action").style.display = "none";
+  siteGroup.visible = false;
+  bots.forEach(b => { b.team = null; setBotLook(b); spawnBot(b); });
+  respawnPlayer();
+  showBoard(false);
+}
+function removeBomb() { if (round.bomb && round.bomb.g) scene.remove(round.bomb.g); }
+
+function nextRound() {
+  round.no++;
+  removeBomb(); round.bomb = null;
+  round.phase = "freeze"; round.t = ROUND.freeze; round.plantP = 0; round.busy = false; round.hint = ""; round.prog = 0;
+  round.tSite = Math.random() < 0.5 ? "A" : "B";
+  const used = { T: 0, CT: 0 };
+  const spawnFor = team => spawnPoints[TEAM_SPAWN_IDX[team][used[team]++ % 5]].clone();
+  respawnPlayer(spawnFor(player.team));
+  let ctN = 0;
+  for (const b of bots) {
+    const sp = spawnFor(b.team);
+    b.pos.copy(sp); b.vel.set(0, 0, 0); b.hp = 100; b.alive = true; b.group.visible = true;
+    b.tgt = null; b.reactT = 0.4; b.planting = 0; b.defP = 0; b.stuck = 0;
+    b.yaw = Math.atan2(sp.x, sp.z); b.group.position.copy(sp); b.group.rotation.y = b.yaw;
+    b.holdR = 5 + Math.random() * 5;
+    b.site = b.team === "T" ? round.tSite : (ctN++ % 2 === 0 ? "A" : "B");
+  }
+  round.carrier = null; ensureCarrier();
+  banner("ROUND " + round.no);
+  msg(player.team === "T" ? "YOU ARE A TERRORIST · plant the bomb at A or B (hold E)" : "YOU ARE A COUNTER-TERRORIST · stop the bomb", 3200);
+  updateHud();
+}
+function ensureCarrier() {
+  if (round.bomb) return;
+  const c = round.carrier;
+  if (c === "player" ? (player.alive && player.team === "T") : (c && c.alive)) return;
+  const pool = bots.filter(b => b.alive && b.team === "T");
+  if (player.alive && player.team === "T") pool.push("player");
+  round.carrier = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  if (round.carrier === "player" && round.phase !== "freeze") msg("YOU HAVE THE BOMB", 2000);
+}
+
+function plantBomb(siteKey, pos) {
+  if (round.bomb || round.phase !== "live") return;
+  const g = new THREE.Group();
+  const box = (w, h, d, x, y, z, c, basic) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), basic ? new THREE.MeshBasicMaterial({ color: c }) : new THREE.MeshLambertMaterial({ color: c })); m.position.set(x, y, z); g.add(m); return m; };
+  box(0.5, 0.2, 0.34, 0, 0.1, 0, 0x2e3b2e);
+  box(0.52, 0.04, 0.12, 0, 0.14, 0, 0xd9b030);
+  box(0.12, 0.08, 0.06, -0.12, 0.24, 0, 0x14171c);
+  const led = box(0.05, 0.04, 0.02, 0.1, 0.22, 0.18, 0xff2020, true);
+  g.position.set(pos.x, pos.y, pos.z);
+  scene.add(g);
+  round.bomb = { site: siteKey, pos: new THREE.Vector3(pos.x, pos.y, pos.z), t: ROUND.bomb, g, led, nextBeep: 0, defuser: null };
+  round.phase = "planted"; round.carrier = null; round.plantP = 0;
+  sfx.plant(); banner("BOMB PLANTED"); msg("BOMB PLANTED AT " + siteKey, 2500);
+  for (const b of bots) b.planting = 0;
+  assignDefuser();
+}
+function assignDefuser() {
+  const bomb = round.bomb;
+  if (!bomb) return;
+  let best = null, bd = 1e9;
+  for (const b of bots) if (b.alive && b.team === "CT") { const d = Math.hypot(b.pos.x - bomb.pos.x, b.pos.z - bomb.pos.z); if (d < bd) { bd = d; best = b; } }
+  bomb.defuser = best;
+}
+function defuseBomb() {
+  if (!round.bomb || round.phase !== "planted") return;
+  round.bomb.led.visible = false;
+  sfx.defuse();
+  endRound("CT", "BOMB DEFUSED");
+}
+function explodeBomb() {
+  const P = round.bomb.pos;
+  sfx.boom(); shake = 1;
+  for (let i = 0; i < 5; i++) burst(P.clone().add(new THREE.Vector3(0, 0.5 + i * 0.5, 0)), [0xffd060, 0xff8a20, 0xff5020, 0x666666, 0x333333][i], 18, 12);
+  const fl = $("flash"); fl.style.transition = "none"; fl.style.opacity = 0.9;
+  requestAnimationFrame(() => { fl.style.transition = "opacity 1.3s"; fl.style.opacity = 0; });
+  for (const b of bots) if (b.alive && b.pos.distanceTo(P) < 25) { b.alive = false; b.group.visible = false; b.deaths++; }
+  if (player.alive && player.pos.distanceTo(P) < 25) {
+    player.hp = 0; player.alive = false; player.deaths++; player.ads = false; streak.n = 0; streak.multi = 0;
+    msg("YOU WERE CAUGHT IN THE BLAST", 2500); updateHud();
+  }
+  round.bomb.g.visible = false;
+  endRound("T", "THE BOMB EXPLODED");
+}
+function endRound(winner, reason) {
+  if (round.phase === "end") return;
+  round.phase = "end"; round.t = ROUND.end; round.score[winner]++;
+  const mine = player.team === winner;
+  banner(winner === "T" ? "TERRORISTS WIN" : "COUNTER-TERRORISTS WIN");
+  msg(reason, 3000); sfx.roundwin();
+  if (mine) earnCoins(25);
+  if (round.score[winner] >= ROUND.toWin) {
+    round.matchOver = true; round.t = 7;
+    msg(mine ? "YOUR TEAM WINS THE MATCH! +100 COINS" : "THE ENEMY TEAM WINS THE MATCH", 6500);
+    if (mine) earnCoins(100);
+    showBoard(true);
+  }
+}
+function resetTeamMatch() {
+  showBoard(false);
+  round.score = { T: 0, CT: 0 }; round.no = 0; round.matchOver = false;
+  for (const b of bots) { b.kills = 0; b.deaths = 0; }
+  player.kills = 0; player.deaths = 0;
+  nextRound();
+}
+
+// what a bot does when it has no enemy in sight
+function teamGoal(b, dt) {
+  const bomb = round.bomb, g = { mx: 0, mz: 0, hold: false, fx: 0, fz: 0 };
+  const toSite = key => { const st = flowStep(b, siteField[key]); if (st) { g.mx = st.x - b.pos.x; g.mz = st.z - b.pos.z; } else g.hold = true; };
+  const dxz = (x, z) => Math.hypot(b.pos.x - x, b.pos.z - z);
+  if (b.team === "T") {
+    if (bomb) {   // guard the planted bomb
+      if (dxz(bomb.pos.x, bomb.pos.z) > b.holdR + 3) toSite(bomb.site); else g.hold = true;
+      g.fx = bomb.pos.x - b.pos.x; g.fz = bomb.pos.z - b.pos.z;
+    } else {
+      const st = SITES[b.site], d = dxz(st.x, st.z);
+      g.fx = st.x - b.pos.x; g.fz = st.z - b.pos.z;
+      if (round.carrier === b && d < st.r - 2) {   // in the plant zone: plant
+        g.hold = true; b.planting += dt;
+        if (b.planting >= ROUND.plant) plantBomb(b.site, b.pos);
+      } else if (round.carrier !== b && d < b.holdR + 4) g.hold = true;
+      else toSite(b.site);
+    }
+  } else if (bomb) {   // CT: rush the bomb, one bot defuses while the rest cover
+    g.fx = bomb.pos.x - b.pos.x; g.fz = bomb.pos.z - b.pos.z;
+    const d = dxz(bomb.pos.x, bomb.pos.z);
+    if (bomb.defuser === b) {
+      if (d > 12) toSite(bomb.site);
+      else if (d > 1.8) { g.mx = bomb.pos.x - b.pos.x; g.mz = bomb.pos.z - b.pos.z; }
+      else { g.hold = true; b.defP += dt; if (b.defP >= ROUND.defuse) defuseBomb(); }
+    } else if (d > b.holdR + 4) toSite(bomb.site); else g.hold = true;
+  } else {   // CT: hold your site
+    const st = SITES[b.site];
+    g.fx = st.x - b.pos.x; g.fz = st.z - b.pos.z;
+    if (dxz(st.x, st.z) > b.holdR) toSite(b.site); else g.hold = true;
+  }
+  return g;
+}
+
+function fmtTime(sec) { sec = Math.max(0, Math.ceil(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
+function spectateTarget() { return bots.find(b => b.alive && b.team === player.team) || bots.find(b => b.alive) || null; }
+
+function updateRound(dt) {
+  if (!round.active) return;
+  round.busy = false; round.hint = ""; round.prog = 0;
+  if (round.phase === "freeze") {
+    round.t -= dt;
+    if (round.t <= 0) { round.phase = "live"; round.t = ROUND.live; banner("GO!"); }
+  } else if (round.phase === "live" || round.phase === "planted") {
+    ensureCarrier();
+    const isT = player.team === "T";
+    if (round.phase === "live") {
+      round.t -= dt;
+      if (isT && round.carrier === "player" && player.alive) {
+        const site = siteAt(player.pos);
+        if (site && player.onGround) {
+          round.hint = "HOLD E TO PLANT";
+          if (keys.KeyE) { round.busy = true; round.plantP += dt; round.prog = round.plantP / ROUND.plant; if (round.plantP >= ROUND.plant) plantBomb(site, player.pos); }
+          else round.plantP = 0;
+        } else round.plantP = 0;
+      }
+    } else {
+      const bomb = round.bomb;
+      bomb.t -= dt;
+      bomb.nextBeep -= dt;
+      if (bomb.nextBeep <= 0) {
+        sfx.beep(); bomb.led.visible = !bomb.led.visible;
+        bomb.nextBeep = Math.max(0.12, 0.08 + 0.9 * (bomb.t / ROUND.bomb));
+        setTimeout(() => { if (round.bomb === bomb) bomb.led.visible = true; }, 90);
+      }
+      if (!bomb.defuser || !bomb.defuser.alive) assignDefuser();
+      if (player.team === "CT" && player.alive && player.pos.distanceTo(bomb.pos) <= 2.6) {
+        round.hint = "HOLD E TO DEFUSE";
+        if (keys.KeyE) { round.busy = true; round.defuseP = (round.defuseP || 0) + dt; round.prog = round.defuseP / ROUND.defuse; if (round.defuseP >= ROUND.defuse) { round.defuseP = 0; defuseBomb(); } }
+        else round.defuseP = 0;
+      } else round.defuseP = 0;
+      if (bomb.t <= 0 && round.phase === "planted") { explodeBomb(); updateRoundHud(); return; }
+    }
+    if (round.phase !== "end") {
+      const ct = teamAliveCount("CT"), t = teamAliveCount("T");
+      if (ct === 0) endRound("T", "COUNTER-TERRORISTS ELIMINATED");
+      else if (t === 0 && !round.bomb) endRound("CT", "TERRORISTS ELIMINATED");
+      else if (round.phase === "live" && round.t <= 0) endRound("CT", "TIME RAN OUT");
+    }
+  } else if (round.phase === "end") {
+    round.t -= dt;
+    if (round.t <= 0) { if (round.matchOver) resetTeamMatch(); else nextRound(); }
+  }
+  updateRoundHud();
+}
+function updateRoundHud() {
+  $("scT").textContent = round.score.T; $("scCT").textContent = round.score.CT;
+  const planted = round.phase === "planted" && round.bomb;
+  $("rtime").textContent = fmtTime(planted ? round.bomb.t : round.t);
+  $("rtime").className = planted ? "hot" : "";
+  let st = "ALIVE  T " + teamAliveCount("T") + "  ·  CT " + teamAliveCount("CT");
+  if (planted) st = "BOMB PLANTED AT " + round.bomb.site + "  ·  " + st;
+  else if (round.phase === "freeze") st = "ROUND " + round.no + "  ·  YOU ARE " + player.team;
+  else if (round.carrier === "player") st = "YOU HAVE THE BOMB  ·  " + st;
+  if (!player.alive) { const sp = spectateTarget(); if (sp) st = "SPECTATING " + sp.name.toUpperCase() + "  ·  " + st; }
+  $("rstatus").textContent = st;
+  const a = $("action");
+  if (round.hint && player.alive) {
+    a.style.display = "block"; $("actionLbl").textContent = round.hint;
+    $("actionBar").style.visibility = round.prog > 0 ? "visible" : "hidden";
+    $("actionFill").style.width = Math.min(100, round.prog * 100) + "%";
+  } else a.style.display = "none";
 }
 
 // ---------------------------------------------------------------- bots
@@ -1021,7 +1338,7 @@ function makeModel(color) {
   deco(body, 0.14, 0.14, 0.08, 0.14, 0.04, -0.25, 0x1b1e23);
   deco(body, 0.5, 0.5, 0.22, 0, 0.1, 0.31, 0x3b4a2f);
   // head: helmet in the player's colour, goggles, mask
-  deco(head, 0.46, 0.2, 0.46, 0, 0.16, 0, color);
+  const helmet = deco(head, 0.46, 0.2, 0.46, 0, 0.16, 0, color);
   deco(head, 0.46, 0.05, 0.12, 0, 0.1, -0.26, 0x1b1b1b);
   deco(head, 0.36, 0.1, 0.04, 0, 0.02, -0.21, 0x0d1117, { emissive: 0x113355 });
   deco(head, 0.38, 0.14, 0.05, 0, -0.12, -0.2, 0x23272e);
@@ -1036,7 +1353,7 @@ function makeModel(color) {
   arms.position.set(0, 1.28, 0);
   g.add(arms);
   scene.add(g);
-  const model = { g, body, head, legL, legR, arms, color, heldKey: null };
+  const model = { g, body, head, legL, legR, arms, color, helmet, heldKey: null };
   equipModel(model, "rifle");
   return model;
 }
@@ -1064,12 +1381,13 @@ function equipModel(m, key) {
 
 function makeBot(i) {
   const color = botColors[i % botColors.length];
-  const { g, body, head, legL, legR } = makeModel(color);
+  const model = makeModel(color);
+  const { g, body, head, legL, legR } = model;
   const name = BOT_NAMES[i % BOT_NAMES.length];
   const tag = nameTag(name);
   g.add(tag);
   const bot = {
-    id: i, name, group: g, kills: 0, deaths: 0, lastShot: -1e9, tgt: null, legL, legR, body, head,
+    id: i, name, group: g, kills: 0, deaths: 0, lastShot: -1e9, tgt: null, tag, arms: model.arms, helmet: model.helmet, color, heldKey: "rifle", team: null, site: "A", holdR: 6, planting: 0, defP: 0, vis: false, legL, legR, body, head,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), onGround: false,
     hp: 100, alive: true, yaw: 0, cd: rand(0.5, 1.5), repath: 0, strafe: Math.random() < 0.5 ? 1 : -1,
     strafeT: rand(1, 2.5), los: false, losT: 0, respawnT: 0, stuck: 0, walk: 0, reactT: 0,
@@ -1115,16 +1433,18 @@ function damageBot(o, d, by) {
 function updateBots(dt) {
   if (matchOverT > 0) return;
   updateFlow(dt);
+  const TM = round.active;
+  const quiet = TM && (round.phase === "freeze" || round.phase === "end");   // nobody moves or shoots between rounds
   for (const b of bots) {
     if (!b.alive) {
-      b.respawnT -= dt;
-      if (b.respawnT <= 0) spawnBot(b);
+      if (!TM) { b.respawnT -= dt; if (b.respawnT <= 0) spawnBot(b); }   // in team mode you stay dead until the round ends
       continue;
     }
     const toP = tmpA.set(player.pos.x - b.pos.x, 0, player.pos.z - b.pos.z);
     const dist = toP.length();
+    const playerEnemy = !TM || b.team !== player.team;
     if (b.tgt && b.tgt !== PLAYER_T && !b.tgt.alive) b.tgt = null;
-    if (b.tgt === PLAYER_T && !player.alive) b.tgt = null;
+    if (b.tgt === PLAYER_T && (!player.alive || !playerEnemy)) b.tgt = null;
 
     // throttled sight checks: can it see the player, and who is the closest visible enemy (player or another bot)
     b.losT -= dt;
@@ -1132,11 +1452,12 @@ function updateBots(dt) {
       b.losT = 0.15;
       const eye = new THREE.Vector3(b.pos.x, b.pos.y + 1.6, b.pos.z);
       const pe = new THREE.Vector3(player.pos.x, player.pos.y + eyeHeight() * 0.8, player.pos.z);
-      b.los = player.alive && dist < 90 && hasLOS(eye, pe);
+      b.los = playerEnemy && player.alive && dist < 90 && hasLOS(eye, pe);
+      b.vis = TM && b.team !== player.team && player.alive && dist < 80 && hasLOS(pe, new THREE.Vector3(b.pos.x, b.pos.y + 1.3, b.pos.z));
       let best = null, bd = 1e9;
       if (b.los) { best = PLAYER_T; bd = dist; }
       for (const o of bots) {
-        if (o === b || !o.alive) continue;
+        if (o === b || !o.alive || (TM && o.team === b.team)) continue;
         const d = Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z);
         if (d < bd && d < 70 && hasLOS(eye, new THREE.Vector3(o.pos.x, o.pos.y + 1.3, o.pos.z))) { best = o; bd = d; }
       }
@@ -1144,41 +1465,50 @@ function updateBots(dt) {
       b.tgt = best;
     }
 
-    // current target: another bot, the player, or (with nothing in sight) head for the player
+    // current target: an enemy in sight, or (free for all, nothing in sight) head for the player
     const tgt = b.tgt;
     let tx = player.pos.x, tz = player.pos.z, tdist = dist;
     if (tgt && tgt !== PLAYER_T) { tx = tgt.pos.x; tz = tgt.pos.z; tdist = Math.hypot(tx - b.pos.x, tz - b.pos.z); }
     const tv = new THREE.Vector3(tx - b.pos.x, 0, tz - b.pos.z);
 
-    // aim
-    const targetYaw = Math.atan2(-tv.x, -tv.z);
-    let dy = targetYaw - b.yaw;
-    while (dy > Math.PI) dy -= Math.PI * 2;
-    while (dy < -Math.PI) dy += Math.PI * 2;
-    b.yaw += dy * Math.min(1, dt * (tgt ? 8 : 3) * diff);
-
     // movement
-    let mx = 0, mz = 0;
+    let mx = 0, mz = 0, hold = false, fx = tv.x, fz = tv.z;
     const speed = 5.2 * (0.85 + 0.15 * diff);
     const fwd = tv.clone().normalize();
     const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
     b.strafeT -= dt;
     if (b.strafeT <= 0) { b.strafe *= -1; b.strafeT = rand(0.8, 2.5); }
-    if (!tgt && !player.alive) {
-      // wander
-      mx = Math.sin(gameTime * 0.5 + b.id) * 0.5; mz = Math.cos(gameTime * 0.4 + b.id) * 0.5;
-    } else if (tgt) {
+    if (quiet) hold = true;
+    else if (tgt) {
+      b.planting = 0;
       const ideal = 14 + (b.id % 4) * 4;
       const fwdAmt = tdist > ideal + 3 ? 1 : tdist < ideal - 5 ? -1 : 0;
       mx = fwd.x * fwdAmt * 0.8 + side.x * b.strafe;
       mz = fwd.z * fwdAmt * 0.8 + side.z * b.strafe;
+    } else if (TM) {
+      const g = teamGoal(b, dt);
+      mx = g.mx; mz = g.mz; hold = g.hold;
+      if (hold || (!mx && !mz)) { fx = g.fx; fz = g.fz; } else { fx = mx; fz = mz; }
+    } else if (!player.alive) {
+      // wander
+      mx = Math.sin(gameTime * 0.5 + b.id) * 0.5; mz = Math.cos(gameTime * 0.4 + b.id) * 0.5;
     } else {
       // no line of sight: follow the flow field around walls toward the player
       const step = flowStep(b);
       if (step) { mx = step.x - b.pos.x; mz = step.z - b.pos.z; } else { mx = fwd.x; mz = fwd.z; }
     }
+
+    // aim
+    if (fx || fz) {
+      const targetYaw = Math.atan2(-fx, -fz);
+      let dy = targetYaw - b.yaw;
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      b.yaw += dy * Math.min(1, dt * (tgt ? 8 : 3) * diff);
+    }
+
     const ml = Math.hypot(mx, mz) || 1;
-    b.vel.x = mx / ml * speed; b.vel.z = mz / ml * speed;
+    if (hold) { b.vel.x = 0; b.vel.z = 0; } else { b.vel.x = mx / ml * speed; b.vel.z = mz / ml * speed; }
     b.vel.y -= 28 * dt;
     const hit = moveEntity(b, dt, 0.35, 1.8);
     if (hit) {
@@ -1187,14 +1517,14 @@ function updateBots(dt) {
       if (Math.random() < dt * 2) b.strafe *= -1;
     } else b.stuck = Math.max(0, b.stuck - dt);
     b.walk += dt * 9;
-    const sw = Math.sin(b.walk) * 0.5;
+    const sw = hold ? 0 : Math.sin(b.walk) * 0.5;
     b.legL.rotation.x = sw; b.legR.rotation.x = -sw;
     b.group.position.copy(b.pos);
     b.group.rotation.y = b.yaw;
 
     // shooting
     b.cd -= dt; b.reactT -= dt;
-    if (tgt && b.reactT <= 0 && b.cd <= 0 && tdist < 60) {
+    if (!quiet && tgt && b.reactT <= 0 && b.cd <= 0 && tdist < 60) {
       b.cd = rand(0.18, 0.4) / diff + 0.05;
       sfx.botShot(clamp(0.3 - dist / 200, 0.03, 0.3));
       const acc = clamp(0.55 * diff - tdist / 120, 0.1, 0.8);
@@ -1206,6 +1536,7 @@ function updateBots(dt) {
         spawnTracer(from, to.add(jitter()), 0xff6666);
         if (Math.random() < acc) damagePlayer(7 + Math.random() * 3, b);
       } else {
+        if (TM && b.team !== player.team) b.lastShot = performance.now();
         const to = new THREE.Vector3(tgt.pos.x, tgt.pos.y + 1.0, tgt.pos.z);
         spawnTracer(from, to.add(jitter()), 0xffb066);
         if (Math.random() < acc * 0.8) damageBot(tgt, 7 + Math.random() * 3, b);
@@ -1279,13 +1610,13 @@ function updateFx(dt) {
 const ray = new THREE.Raycaster();
 function botMeshes() {
   const out = [];
-  for (const b of bots) if (b.alive) out.push(b.body, b.head, b.legL, b.legR);
+  for (const b of bots) if (b.alive && !(round.active && b.team === player.team)) out.push(b.body, b.head, b.legL, b.legR);   // no friendly fire
   for (const r of net.remotes.values()) if (r.alive) out.push(r.body, r.head, r.legL, r.legR);
   return out;
 }
 function shoot() {
   const w = WEAPONS[player.weapon], a = player.ammo[player.weapon];
-  if (player.reloading > 0 || player.cooldown > 0 || !player.alive || matchOverT > 0) return;
+  if (player.reloading > 0 || player.cooldown > 0 || !player.alive || matchOverT > 0 || (round.active && round.phase === "freeze")) return;
   if (w.melee) { knifeSwing(w); return; }
   if (a.mag <= 0) { sfx.empty(); player.cooldown = 0.25; if (a.res > 0) reload(); return; }
   a.mag--; player.cooldown = w.rate;
@@ -1492,14 +1823,15 @@ const SCORE_LIMIT = 25;
 let matchOverT = 0;
 function getRows() {
   if (net.on) return net.board.map(r => ({ name: r.name, k: r.k, d: r.d, me: r.id === net.id }));
-  return [{ name: "You", k: player.kills, d: player.deaths, me: true }]
-    .concat(bots.map(b => ({ name: b.name, k: b.kills, d: b.deaths, me: false })));
+  return [{ name: "You", k: player.kills, d: player.deaths, me: true, team: player.team }]
+    .concat(bots.map(b => ({ name: b.name, k: b.kills, d: b.deaths, me: false, team: b.team })));
 }
 const sortRows = rows => rows.sort((a, b) => b.k - a.k || a.d - b.d);
 function lbRow(rank, r) {
   const d = document.createElement("div");
   d.className = "r" + (r.me ? " me" : "");
   for (const t of [rank, r.name, r.k, r.d]) { const s = document.createElement("span"); s.textContent = t; d.appendChild(s); }
+  if (r.team) d.children[1].style.color = TEAM_CSS[r.team];
   return d;
 }
 function renderLb() {
@@ -1507,7 +1839,7 @@ function renderLb() {
   const rows = sortRows(getRows());
   const head = document.createElement("h4");
   const a = document.createElement("span"); a.textContent = "LEADERBOARD";
-  const b = document.createElement("span"); b.textContent = net.on ? (net.serverName || "LIVE").toUpperCase().slice(0, 16) : "FIRST TO " + SCORE_LIMIT;
+  const b = document.createElement("span"); b.textContent = net.on ? (net.serverName || "LIVE").toUpperCase().slice(0, 16) : (round.active ? "ROUND " + round.no : "FIRST TO " + SCORE_LIMIT);
   head.append(a, b);
   const frag = [head, lbRow("#", { name: "PLAYER", k: "K", d: "D", me: false })];
   frag[1].style.opacity = 0.6;
@@ -1517,7 +1849,7 @@ function renderLb() {
   el.replaceChildren(...frag);
 }
 function checkWin() {
-  if (net.on || matchOverT > 0) return;
+  if (net.on || round.active || matchOverT > 0) return;
   const w = getRows().find(r => r.k >= SCORE_LIMIT);
   if (!w) return;
   matchOverT = 7;
@@ -1555,9 +1887,21 @@ function drawMinimap() {
   mctx.save();
   mctx.beginPath(); mctx.arc(c, c, c - 1, 0, Math.PI * 2); mctx.clip();
   if (!net.on) for (const p of pickups) if (p.t <= 0) dot(p.x, p.z, p.kind === "hp" ? "#4ade80" : "#facc15", 3);
+  if (round.active) {
+    const toMap = (x, z) => { const dx = x - px, dz = z - pz; return [c + (dx * cos - dz * sin) * sc, c + (dx * sin + dz * cos) * sc]; };
+    for (const k of ["A", "B"]) {
+      const [sx, sy] = toMap(SITES[k].x, SITES[k].z);
+      mctx.strokeStyle = "rgba(255,210,60,.85)"; mctx.lineWidth = 2;
+      mctx.beginPath(); mctx.arc(sx, sy, SITES[k].r * sc, 0, Math.PI * 2); mctx.stroke();
+      mctx.fillStyle = "#ffd23c"; mctx.font = "bold 16px sans-serif"; mctx.textAlign = "center"; mctx.textBaseline = "middle";
+      mctx.fillText(k, sx, sy);
+    }
+    if (round.bomb && Math.floor(performance.now() / 300) % 2 === 0) dot(round.bomb.pos.x, round.bomb.pos.z, "#ff3030", 5);
+    for (const b of bots) if (b.alive && b.team === player.team) dot(b.pos.x, b.pos.z, "#5aa0ff", 4);   // teammates always show
+  }
   // enemies show while they can see you or just fired
   const now = performance.now();
-  for (const b of bots) if (b.alive && (b.los || now - b.lastShot < 1500)) dot(b.pos.x, b.pos.z, "#ff4d4d", 4);
+  for (const b of bots) if (b.alive && (round.active ? (b.team !== player.team && (b.vis || now - b.lastShot < 1500)) : (b.los || now - b.lastShot < 1500))) dot(b.pos.x, b.pos.z, "#ff4d4d", 4);
   for (const r of net.remotes.values()) if (r.alive && (r.vis || now - r.lastShot < 1500)) dot(r.pos.x, r.pos.z, "#ff4d4d", 4);
   // view cone and you
   mctx.fillStyle = "rgba(255,255,255,.16)";
@@ -1597,12 +1941,12 @@ const net = {
   send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
 };
 
-function nameTag(text) {
+function nameTag(text, color) {
   const c = document.createElement("canvas"); c.width = 256; c.height = 64;
   const g = c.getContext("2d");
   g.font = "bold 34px Segoe UI, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
   g.lineWidth = 6; g.strokeStyle = "rgba(0,0,0,.85)"; g.strokeText(text, 128, 34);
-  g.fillStyle = "#fff"; g.fillText(text, 128, 34);
+  g.fillStyle = color || "#fff"; g.fillText(text, 128, 34);
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
   spr.scale.set(1.8, 0.45, 1); spr.position.y = 2.3;
   spr.renderOrder = 1000;
@@ -1896,14 +2240,20 @@ function showBoard(on) {
   const el = $("board");
   if (!on) { el.style.display = "none"; return; }
   const rows = sortRows(getRows());
-  const table = document.createElement("table");
-  const hr = table.insertRow();
-  for (const t of ["PLAYER", "KILLS", "DEATHS", "K/D"]) { const th = document.createElement("th"); th.textContent = t; hr.appendChild(th); }
-  for (const r of rows) {
-    const tr = table.insertRow(); if (r.me) tr.className = "me";
-    for (const t of [r.name, r.k, r.d, r.d ? (r.k / r.d).toFixed(1) : r.k.toFixed(1)]) tr.insertCell().textContent = t;
-  }
-  el.replaceChildren(table);
+  const table = (title, list, color) => {
+    const t = document.createElement("table");
+    const hr = t.insertRow();
+    ["" + title, "KILLS", "DEATHS", "K/D"].forEach((x, i) => { const th = document.createElement("th"); th.textContent = x; if (i === 0 && color) th.style.color = color; hr.appendChild(th); });
+    for (const r of list) {
+      const tr = t.insertRow(); if (r.me) tr.className = "me";
+      for (const x of [r.name, r.k, r.d, r.d ? (r.k / r.d).toFixed(1) : r.k.toFixed(1)]) tr.insertCell().textContent = x;
+    }
+    return t;
+  };
+  const parts = round.active
+    ? [["T", "TERRORISTS"], ["CT", "COUNTER-TERRORISTS"]].map(([k, name]) => table(name + "  " + round.score[k], rows.filter(r => r.team === k), TEAM_CSS[k]))
+    : [table("PLAYER", rows)];
+  el.replaceChildren(...parts);
   el.style.display = "block";
 }
 
@@ -2097,6 +2447,15 @@ function renderPreview(dt) {
 }
 updateCoinUI(); updateLoadoutLine();
 
+// ---------------------------------------------------------------- game mode selector
+function syncGameMode() {
+  const bomb = $("gameMode").value === "bomb";
+  document.querySelectorAll(".ffa-only").forEach(e => { e.style.display = bomb ? "none" : ""; });
+  document.querySelectorAll(".bomb-only").forEach(e => { e.style.display = bomb ? "" : "none"; });
+}
+$("gameMode").addEventListener("change", syncGameMode);
+syncGameMode();
+
 // ---------------------------------------------------------------- server browser
 // Servers are saved in this browser. Each one answers a quick "info" request with its name and player count.
 const SRV_KEY = "bs_servers", LAST_KEY = "bs_last_server";
@@ -2251,8 +2610,13 @@ document.addEventListener("pointerlockchange", () => {
   menu.style.display = playing ? "none" : "flex";
   $("hud").style.display = playing ? "block" : "none";
   const mp = $("mode").value === "mp";
-  if (playing) setBotCount(mp ? 0 : parseInt($("botCount").value));
-  if (playing && !player.initialised) { player.initialised = true; respawnPlayer(); switchWeapon(0); gunMeshes[0].visible = true; updateHud(); }
+  if (playing) {
+    const wantTeam = !mp && $("gameMode").value === "bomb";
+    if (wantTeam && (!round.active || round.chosen !== $("team").value)) startTeamMode();
+    else if (!wantTeam && round.active) endTeamMode();
+    if (!wantTeam) setBotCount(mp ? 0 : parseInt($("botCount").value));
+  }
+  if (playing && !player.initialised) { player.initialised = true; if (!round.active) respawnPlayer(); switchWeapon(0); gunMeshes[0].visible = true; updateHud(); }
   if (!playing) {
     showTab("play");
     mouseDown = false; for (const k in keys) keys[k] = false; if (matchOverT <= 0) showBoard(false);
@@ -2311,7 +2675,7 @@ const wishDir = new THREE.Vector3();
 function updatePlayer(dt) {
   if (!player.alive) {
     player.deadT -= dt;
-    if (player.deadT <= 0 && !net.on) { respawnPlayer(); }
+    if (player.deadT <= 0 && !net.on && !round.active) { respawnPlayer(); }
     return;
   }
   // crouch / slide
@@ -2334,6 +2698,8 @@ function updatePlayer(dt) {
   const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
   wishDir.set(-sin * f + cos * s, 0, -cos * f - sin * s);
   if (wishDir.lengthSq() > 0) wishDir.normalize();
+  const locked = round.active && (round.busy || round.phase === "freeze");   // planting, defusing or round start
+  if (locked) wishDir.set(0, 0, 0);
 
   let maxSpeed = 8.5;
   if (keys.ShiftLeft && f > 0 && !player.crouch && !player.ads) maxSpeed = 11;
@@ -2353,7 +2719,7 @@ function updatePlayer(dt) {
     }
     if (!sliding) accelerate(wishDir, maxSpeed, ACCEL_GROUND, dt);
     // jump (holding space bunny-hops)
-    if (keys.Space) { player.vel.y = JUMP_V; player.onGround = false; sfx.jump(); }
+    if (keys.Space && !locked) { player.vel.y = JUMP_V; player.onGround = false; sfx.jump(); }
   } else {
     accelerate(wishDir, maxSpeed, ACCEL_AIR, dt);   // Quake-style air strafing => bhop gains
     player.vel.y -= GRAVITY * dt;
@@ -2441,6 +2807,13 @@ function updateCamera(dt) {
     camera.rotation.z += (Math.random() - 0.5) * shake * 0.03;
   }
 
+  if (round.active && !player.alive) {   // dead: watch a teammate
+    const sp = spectateTarget();
+    if (sp) {
+      camera.position.set(sp.pos.x - Math.sin(sp.yaw) * 0.3, sp.pos.y + 1.6, sp.pos.z - Math.cos(sp.yaw) * 0.3);
+      camera.rotation.set(0, sp.yaw, 0);
+    }
+  }
   // gun position/animation
   const scoped = player.ads && w.scope;
   const target = player.ads ? gunMeshes[player.weapon].userData.ads : GUN_HIP;
@@ -2489,6 +2862,7 @@ function loop() {
     const nowMs = performance.now();
     if (nowMs - fpsT0 > 500) { $("fps").textContent = Math.round(fpsFrames * 1000 / (nowMs - fpsT0)) + " FPS"; fpsFrames = 0; fpsT0 = nowMs; }
     updateBots(dt);
+    updateRound(dt);
     updateRemotes(dt);
     netTick(dt);
     updateFx(dt);
@@ -2520,7 +2894,7 @@ function loop() {
 loop();
 
 // expose for debugging/tests
-window.__game = { WEAPONS, save, CATALOG, player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
+window.__game = { round, ROUND, SITES, startTeamMode, WEAPONS, save, CATALOG, player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
 })();
 </script>
 </body>

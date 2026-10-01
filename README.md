@@ -56,6 +56,18 @@ To show some servers to everyone who opens the page, list them in `servers.json`
 [{ "name": "Alpha", "addr": "wss://alpha.example.com" }]
 ```
 
+## Bomb defusal (5v5)
+
+Pick **Bomb defusal · 5v5** under Solo, choose your side, and play. You and 4 bots face 5 bots, with two bomb sites on the map, **A** (east) and **B** (west).
+
+- **Terrorists (T)** carry the bomb. Walk into the yellow ring at A or B and hold **E** to plant it. The bomb blows up 35 seconds later.
+- **Counter-terrorists (CT)** stop them. Eliminate the T team, or hold **E** next to the planted bomb to defuse it.
+- A round ends when a team is wiped out, the bomb explodes or is defused, or time runs out with no bomb planted (CT wins). First team to 5 rounds wins the match.
+- Dead players wait for the next round and watch a teammate. No friendly fire. The minimap shows the sites, the bomb and your teammates.
+- Coins: round win +25, match win +100, on top of kill coins.
+
+This mode is solo against bots. Online rooms are still free for all.
+
 ## Armory and coins
 
 Every kill earns coins (+10, +5 more for a headshot or backstab, +10 for a kill streak, +50 for winning a solo match). Spend them in the **Armory** tab on new weapons and sights:
@@ -63,7 +75,7 @@ Every kill earns coins (+10, +5 more for a headshot or backstab, +10 for a kill 
 - **Primary:** assault rifle, SMG, LMG
 - **Secondary:** shotgun, pistol, revolver, auto shotgun
 - **Sniper slot:** bolt-action sniper, semi-auto marksman
-- **Sights:** iron, red dot, holographic and a 4x scope for rifles, SMGs, LMGs and pistols
+- **Sights:** iron, a reflex red dot, a holographic sight (ring and ticks) and a 4x scope for rifles, SMGs, LMGs and pistols
 
 Your coins and loadout are saved in your browser. Other players see the weapon you have out. Coins are stored on your own computer, so they only count for you.
 
