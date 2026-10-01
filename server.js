@@ -10,7 +10,8 @@ const path = require("path");
 const os = require("os");
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
-const MAX_PLAYERS = 16;
+const MAX_PLAYERS = parseInt(process.env.MAX_PLAYERS, 10) || 16;
+const SERVER_NAME = String(process.env.SERVER_NAME || "Blockstrike Server").slice(0, 32);
 const RESPAWN_MS = 3000;
 const REGEN_DELAY_MS = 5000;
 const COLORS = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
@@ -28,6 +29,11 @@ const server = http.createServer((req, res) => {
       if (err) { res.writeHead(404); return res.end("index.html must sit next to server.js"); }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(data);
+    });
+  } else if (req.url.startsWith("/servers.json")) {
+    fs.readFile(path.join(__dirname, "servers.json"), (err, data) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(err ? "[]" : data);
     });
   } else { res.writeHead(404); res.end(); }
 });
@@ -98,6 +104,8 @@ function sendBoard() {
 }
 
 function onMessage(conn, m) {
+  // the server browser asks for name and player count before anyone joins
+  if (m.t === "info") return wsSend(conn.sock, JSON.stringify({ t: "info", name: SERVER_NAME, players: players.size, max: MAX_PLAYERS }));
   let p = conn.player;
   if (m.t === "join" && !p) {
     if (players.size >= MAX_PLAYERS) { wsSend(conn.sock, JSON.stringify({ t: "full" })); return conn.sock.end(); }
@@ -109,7 +117,7 @@ function onMessage(conn, m) {
       yaw: 0, pitch: 0, w: 0, cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0,
     };
     send(p, {
-      t: "welcome", id, name, spawn: sp,
+      t: "welcome", id, name, spawn: sp, server: SERVER_NAME,
       players: [...players.values()].map(o => ({ id: o.id, name: o.name, color: o.color, x: o.x, y: o.y, z: o.z, alive: o.alive })),
     });
     players.set(id, p);
@@ -178,7 +186,7 @@ setInterval(() => {
 }, 50);
 
 server.listen(PORT, () => {
-  console.log(`BLOCKSTRIKE server on port ${PORT}`);
+  console.log(`BLOCKSTRIKE server "${SERVER_NAME}" on port ${PORT}`);
   for (const list of Object.values(os.networkInterfaces()))
     for (const i of list) if (i.family === "IPv4" && !i.internal) console.log(`  LAN:   http://${i.address}:${PORT}`);
   console.log(`  local: http://localhost:${PORT}`);

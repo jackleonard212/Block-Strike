@@ -21,6 +21,23 @@ Everyone opens `http://<server-ip>:3000` (the server prints its LAN address on s
 The server field fills in automatically. Up to 16 players. Over the internet you need to forward the port or use a tunnel.
 Hold Tab for the scoreboard. Esc leaves the match.
 
+## Servers
+
+The menu has a server list. Pick one, or add your own with a name and a `ws://` / `wss://` address. Each row shows whether the server is online, how many players are in it and your ping. Your saved servers stay in your browser.
+
+Run as many servers as you like, each on its own port and with its own name:
+
+```
+SERVER_NAME="Alpha" PORT=3000 node server.js
+SERVER_NAME="Bravo" PORT=3001 MAX_PLAYERS=8 node server.js
+```
+
+To show some servers to everyone who opens the page, list them in `servers.json` next to `index.html`:
+
+```
+[{ "name": "Alpha", "addr": "wss://alpha.example.com" }]
+```
+
 ## Features
 
 - Dust II-style map: T spawn in the south, CT spawn in the north, long A, short A, mid doors, B tunnels and two bomb-site style areas. Bots path around walls.

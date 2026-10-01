@@ -68,6 +68,23 @@
   .dn{position:absolute;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 3px #000;animation:dn .8s ease-out forwards;transform:translate(-50%,-50%)}
   .dn.h{color:#facc15;font-size:30px}
   @keyframes dn{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-60px}}
+  #servers{width:min(660px,92vw);margin-top:14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px}
+  #servers .srv-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:2px;opacity:.85;margin-bottom:6px}
+  #servers button{font:inherit;font-size:12px;font-weight:800;letter-spacing:1px;padding:4px 10px;background:#2a2a44;color:#fff;border:1px solid #556;border-radius:4px;cursor:pointer}
+  #servers button:hover{background:#3a3a60}
+  #srvList{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:4px}
+  .srv{display:grid;grid-template-columns:1.2fr 1.4fr auto 22px;gap:10px;align-items:center;padding:6px 8px;border-radius:5px;cursor:pointer;background:rgba(255,255,255,.04);font-size:14px;font-weight:700}
+  .srv:hover{background:rgba(255,255,255,.1)}
+  .srv.sel{outline:2px solid #f472b6;background:rgba(244,114,182,.12)}
+  .srv span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .srv .a{opacity:.55;font-weight:500;font-size:12px}
+  .srv .st{font-size:12px;min-width:96px;text-align:right}
+  .srv .st.ok{color:#4ade80}
+  .srv .st.off{color:#ff7a7a}
+  .srv .x{opacity:.5;text-align:center}
+  .srv .x:hover{opacity:1;color:#ff7a7a}
+  #servers .srv-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  #servers .srv-add input{flex:1 1 120px;min-width:0}
   #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
   #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
@@ -115,7 +132,7 @@
     <label class="mp-only">Name
       <input id="pname" maxlength="12" value="Player">
     </label>
-    <label class="mp-only">Server
+    <label class="mp-only">Selected
       <input id="server" value="ws://localhost:3000" spellcheck="false">
     </label>
     <label>Sensitivity
@@ -124,6 +141,15 @@
     <label>FOV
       <input id="fov" type="range" min="70" max="110" step="1" value="85">
     </label>
+  </div>
+  <div id="servers" class="mp-only">
+    <div class="srv-head"><span>SERVERS</span><button id="srvRefresh" type="button">REFRESH</button></div>
+    <div id="srvList"></div>
+    <div class="srv-add">
+      <input id="srvName" placeholder="Name" maxlength="32" autocomplete="off">
+      <input id="srvAddr" placeholder="ws://host:3000 or wss://host" spellcheck="false" autocomplete="off">
+      <button id="srvAdd" type="button">ADD</button>
+    </div>
   </div>
   <div class="btn" id="play">CLICK TO PLAY</div>
   <table>
@@ -994,7 +1020,7 @@ function renderLb() {
   const rows = sortRows(getRows());
   const head = document.createElement("h4");
   const a = document.createElement("span"); a.textContent = "LEADERBOARD";
-  const b = document.createElement("span"); b.textContent = net.on ? "LIVE" : "FIRST TO " + SCORE_LIMIT;
+  const b = document.createElement("span"); b.textContent = net.on ? (net.serverName || "LIVE").toUpperCase().slice(0, 16) : "FIRST TO " + SCORE_LIMIT;
   head.append(a, b);
   const frag = [head, lbRow("#", { name: "PLAYER", k: "K", d: "D", me: false })];
   frag[1].style.opacity = 0.6;
@@ -1079,7 +1105,7 @@ function updateWorld(dt) {
 // The server (server.js) owns health, kills and respawns. Clients send their own
 // position 20x/second and report hits; everything else is relayed.
 const net = {
-  ws: null, on: false, id: null, remotes: new Map(), sendT: 0, board: [],
+  ws: null, on: false, serverName: "", id: null, remotes: new Map(), sendT: 0, board: [],
   send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
 };
 
@@ -1116,7 +1142,7 @@ function removeRemote(id) {
 
 function netDisconnect() {
   const ws = net.ws;
-  net.ws = null; net.on = false; net.id = null;
+  net.ws = null; net.on = false; net.serverName = ""; net.id = null;
   if (ws) { ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null; try { ws.close(); } catch (e) { /* already closed */ } }
   for (const id of [...net.remotes.keys()]) removeRemote(id);
   net.board = [];
@@ -1144,7 +1170,8 @@ function netHandle(m) {
       net.id = m.id; net.on = true;
       for (const o of m.players) addRemote(o);
       respawnPlayer(new THREE.Vector3(m.spawn[0], 0, m.spawn[1]));
-      feed("Joined as " + m.name);
+      net.serverName = m.server || "Server";
+      feed("Joined " + net.serverName + " as " + m.name);
       break;
     case "full": setNote("That server is full.", true); break;
     case "join": addRemote(m); feed(m.name + " joined"); break;
@@ -1266,7 +1293,94 @@ function syncMode() {
   document.querySelectorAll(".solo-only").forEach(e => e.style.display = mp ? "none" : "");
   document.querySelectorAll(".mp-only").forEach(e => e.style.display = mp ? "" : "none");
 }
-$("mode").addEventListener("change", syncMode); syncMode();
+$("mode").addEventListener("change", () => { syncMode(); if ($("mode").value === "mp") refreshServers(); });
+syncMode();
+
+// ---------------------------------------------------------------- server browser
+// Servers are saved in this browser. Each one answers a quick "info" request with its name and player count.
+const SRV_KEY = "bs_servers", LAST_KEY = "bs_last_server";
+let servers = [];
+function saveCustom() {
+  try { localStorage.setItem(SRV_KEY, JSON.stringify(servers.filter(s => s.custom).map(({ name, addr }) => ({ name, addr })))); } catch (e) { /* storage unavailable */ }
+}
+function loadServers(extra) {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(SRV_KEY) || "[]"); } catch (e) { /* ignore */ }
+  const here = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+  const base = [{ name: "This computer", addr: "ws://localhost:3000" }];
+  if (isHttp && location.host && !/github\.io$/.test(location.hostname)) base.unshift({ name: "This host", addr: here });
+  const seen = new Set();
+  servers = [...base, ...(extra || []), ...saved.map(s => ({ ...s, custom: true }))]
+    .filter(s => s && typeof s.addr === "string" && /^wss?:\/\//.test(s.addr) && !seen.has(s.addr) && seen.add(s.addr))
+    .map(s => ({ name: String(s.name || s.addr).slice(0, 32), addr: s.addr, custom: !!s.custom, status: null }));
+  try {
+    const last = localStorage.getItem(LAST_KEY);
+    if (last && servers.some(s => s.addr === last)) $("server").value = last;
+  } catch (e) { /* ignore */ }
+}
+function queryServer(addr) {
+  return new Promise(resolve => {
+    let ws, done = false, t0 = performance.now();
+    const to = setTimeout(() => finish(null), 3000);
+    const finish = r => { if (done) return; done = true; clearTimeout(to); try { ws && ws.close(); } catch (e) { /* ignore */ } resolve(r); };
+    try { ws = new WebSocket(addr); } catch (e) { return finish(null); }
+    ws.onopen = () => { t0 = performance.now(); ws.send(JSON.stringify({ t: "info" })); };
+    ws.onmessage = e => { try { const m = JSON.parse(e.data); if (m.t === "info") finish({ ...m, ping: Math.round(performance.now() - t0) }); } catch (err) { /* ignore */ } };
+    ws.onerror = () => finish(null);
+    ws.onclose = () => finish(null);
+  });
+}
+function renderServers() {
+  const cur = $("server").value.trim();
+  const rows = servers.map(s => {
+    const row = document.createElement("div");
+    row.className = "srv" + (s.addr === cur ? " sel" : "");
+    const n = document.createElement("span"); n.textContent = s.name;
+    const a = document.createElement("span"); a.className = "a"; a.textContent = s.addr;
+    const st = document.createElement("span");
+    st.className = "st" + (s.status && !s.status.pending ? (s.status.ok ? " ok" : " off") : "");
+    st.textContent = s.status ? s.status.text : "–";
+    const x = document.createElement("span"); x.className = "x"; x.title = "Remove"; x.textContent = s.custom ? "✕" : "";
+    row.append(n, a, st, x);
+    row.addEventListener("click", ev => {
+      if (ev.target === x && s.custom) { servers = servers.filter(o => o !== s); saveCustom(); renderServers(); return; }
+      $("server").value = s.addr;
+      try { localStorage.setItem(LAST_KEY, s.addr); } catch (e) { /* ignore */ }
+      renderServers();
+    });
+    return row;
+  });
+  $("srvList").replaceChildren(...rows);
+}
+let srvBusy = false;
+async function refreshServers() {
+  if (srvBusy) return;
+  srvBusy = true;
+  servers.forEach(s => { s.status = { pending: true, text: "checking…" }; });
+  renderServers();
+  await Promise.all(servers.map(async s => {
+    const r = await queryServer(s.addr);
+    s.status = r ? { ok: true, text: r.players + "/" + r.max + " · " + r.ping + " ms" } : { ok: false, text: "offline" };
+    renderServers();
+  }));
+  srvBusy = false;
+}
+$("srvRefresh").addEventListener("click", refreshServers);
+$("server").addEventListener("input", renderServers);
+$("srvAdd").addEventListener("click", () => {
+  const addr = $("srvAddr").value.trim(), name = $("srvName").value.trim() || addr;
+  if (!/^wss?:\/\/\S+$/.test(addr)) { setNote("Server addresses start with ws:// or wss://", true); return; }
+  if (location.protocol === "https:" && addr.startsWith("ws://") && !/^ws:\/\/(localhost|127\.0\.0\.1)/.test(addr)) setNote("This page is https, so browsers only allow wss:// servers (or localhost).", true);
+  else setNote("Server added.");
+  if (!servers.some(s => s.addr === addr)) { servers.push({ name: name.slice(0, 32), addr, custom: true, status: null }); saveCustom(); }
+  $("server").value = addr; $("srvAddr").value = ""; $("srvName").value = "";
+  try { localStorage.setItem(LAST_KEY, addr); } catch (e) { /* ignore */ }
+  renderServers(); refreshServers();
+});
+loadServers(); renderServers();
+fetch("servers.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
+  if (Array.isArray(list) && list.length) { loadServers(list); renderServers(); }
+}).catch(() => { /* no servers.json next to the page */ });
 
 $("play").addEventListener("click", () => {
   audio().resume();
