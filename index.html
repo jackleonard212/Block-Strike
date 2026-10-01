@@ -278,85 +278,93 @@ function addBox(x, y, z, w, h, d, color, opts = {}) {
 }
 
 function buildMap() {
-  // floor
+  // sandy floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(ARENA * 2, ARENA * 2, 40, 40),
-    new THREE.MeshLambertMaterial({ color: 0x6b8f5b })
+    new THREE.MeshLambertMaterial({ color: 0xa98b5a })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
-  const grid = new THREE.GridHelper(ARENA * 2, 60, 0x000000, 0x000000);
-  grid.material.opacity = 0.12; grid.material.transparent = true;
+  const grid = new THREE.GridHelper(ARENA * 2, 60, 0x6b5a3a, 0x6b5a3a);
+  grid.material.opacity = 0.1; grid.material.transparent = true;
   grid.position.y = 0.01;
   scene.add(grid);
   wallMeshes.push(floor);
 
-  // outer walls
-  const wc = 0x8b8fa8, H = 14, T = 2;
-  addBox(0, 0, -ARENA - T / 2, ARENA * 2 + T * 2, H, T, wc);
-  addBox(0, 0,  ARENA + T / 2, ARENA * 2 + T * 2, H, T, wc);
-  addBox(-ARENA - T / 2, 0, 0, T, H, ARENA * 2, wc);
-  addBox( ARENA + T / 2, 0, 0, T, H, ARENA * 2, wc);
+  // outer walls (these must stay the first four boxes: the minimap skips them)
+  const H = 14, T = 2, OUT = 0xa88d62;
+  addBox(0, 0, -ARENA - T / 2, ARENA * 2 + T * 2, H, T, OUT);
+  addBox(0, 0,  ARENA + T / 2, ARENA * 2 + T * 2, H, T, OUT);
+  addBox(-ARENA - T / 2, 0, 0, T, H, ARENA * 2, OUT);
+  addBox( ARENA + T / 2, 0, 0, T, H, ARENA * 2, OUT);
 
-  // central tower with stairs
-  addBox(0, 0, 0, 14, 7, 14, 0xc2a37a);
-  addBox(0, 7, 0, 6, 1, 6, 0xa7855a);
-  const steps = 7;
-  // stairs on +x side of the tower
-  for (let i = 0; i < steps; i++) {
-    const h = 1 + i;
-    addBox(8 + (steps - 1 - i) * 1.4, 0, 0, 1.4, Math.min(h, 7), 4, 0xd9bf93);
+  // Dust-style palette: sandstone walls, wood and military crates, blue door frames
+  const SAND = [0xc9a96e, 0xbf9d63, 0xb8956a, 0xd0b27a];
+  let n = 0;
+  const sand = () => SAND[n++ % SAND.length];
+  const WOOD = 0x8a5a2b, MIL = 0x5f6f3c, BLUE = 0x4a6fa5, STONE = 0x9c8a6c;
+  const block = (cx, cz, w, d, h, color) => addBox(cx, 0, cz, w, h, d, color || sand());
+  const wall = (x1, z1, x2, z2, h = 8) => block((x1 + x2) / 2, (z1 + z2) / 2, Math.abs(x2 - x1) || 2, Math.abs(z2 - z1) || 2, h);
+  const crate = (cx, cz, w, d, h, color = WOOD) => block(cx, cz, w, d, h, color);
+
+  // ---- the lanes: tunnels | alley | mid | alley | long (all z -6..34)
+  block(-29, 14, 10, 40, 8);   // building between B tunnels and the west alley
+  block(-13, 14, 14, 40, 8);   // building west of mid
+  block( 13, 14, 14, 40, 8);   // building east of mid
+  block( 29, 14, 10, 40, 8);   // building between the east alley and long A
+  wall(-49, 4, -49, 36);       // outer wall of the tunnels
+  wall( 49, 4,  49, 36);       // outer wall of long A
+  block(-55, 20, 10, 34, 8, STONE);   // fill the dead pockets behind those walls
+  block( 55, 20, 10, 34, 8, STONE);
+
+  // ---- T spawn courtyard (z 36..60)
+  crate(-24, 48, 5, 5, 2.4);
+  crate( 24, 48, 5, 5, 2.4, MIL);
+  crate(  0, 46, 8, 3, 1.4, STONE);
+  crate(-40, 52, 4, 4, 3, MIL);
+  crate( 40, 52, 4, 4, 3);
+  crate(-12, 56, 3, 3, 1.6);
+  crate( 12, 56, 3, 3, 1.6);
+
+  // ---- mid
+  crate(0, 24, 3, 3, 3, MIL);                       // xbox
+  wall(-20, -16, -4, -16);                          // mid doors
+  wall(  4, -16, 20, -16);
+  addBox(0, 5.2, -16, 8.2, 2.8, 2, BLUE);           // lintel over the doors
+  block(-14, -25, 12, 18, 8);                       // CT mid corridor walls
+  block( 14, -25, 12, 18, 8);
+
+  // ---- CT spawn
+  wall( 20, -58,  20, -52);  wall( 20, -42,  20, -34);   // exit to A
+  wall(-20, -58, -20, -52);  wall(-20, -42, -20, -34);   // exit to B
+  crate(-10, -48, 4, 4, 2.4);
+  crate( 10, -48, 4, 4, 2.4, MIL);
+  crate(  0, -40, 6, 2, 1.4, STONE);
+
+  // ---- A site (north-east) and B site (north-west), mirrored
+  for (const sx of [1, -1]) {
+    block(sx * 54, -34, 8, 10, 4.4, STONE);        // sniper perch, reach it with the jump pad
+    block(sx * 54, -52, 8, 8, 6);                  // corner building
+    crate(sx * 31, -22, 5, 5, 3);
+    crate(sx * 36, -26, 4, 4, 1.6, MIL);
+    crate(sx * 44, -14, 6, 6, 2.4);
+    crate(sx * 40, -46, 5, 5, 3, MIL);
+    crate(sx * 30, -44, 3, 3, 1.6);
+    crate(sx * 52,  -2, 6, 6, 2.4);                // the pit
+    crate(sx * 44, -10, 6, 2, 3, STONE);           // low wall guarding the long A exit
   }
 
-  // symmetric cover
-  const palette = [0xe76f51, 0x2a9d8f, 0xe9c46a, 0x6a4c93, 0x4895ef, 0xef476f];
-  const cover = [
-    [-30, -30, 8, 4, 8], [30, -30, 8, 4, 8], [-30, 30, 8, 4, 8], [30, 30, 8, 4, 8],
-    [-18, 0, 4, 3, 14], [18, 0, 4, 3, 14],
-    [0, -28, 16, 3, 3], [0, 28, 16, 3, 3],
-    [-45, -10, 6, 2.5, 6], [45, 10, 6, 2.5, 6], [-45, 15, 6, 5, 6], [45, -15, 6, 5, 6],
-    [-12, -18, 3, 2, 3], [12, 18, 3, 2, 3], [12, -18, 3, 2, 3], [-12, 18, 3, 2, 3],
-    [-28, -8, 3, 1.5, 3], [28, 8, 3, 1.5, 3], [-5, 40, 3, 3, 3], [5, -40, 3, 3, 3],
-    [-40, 45, 10, 3, 3], [40, -45, 10, 3, 3], [-50, -45, 3, 6, 3], [50, 45, 3, 6, 3],
-  ];
-  cover.forEach((c, i) => addBox(c[0], 0, c[1], c[2], c[3], c[4], palette[i % palette.length]));
-
-  // raised platforms with jump-up blocks
-  addBox(-30, 5, -30, 6, 0.6, 6, 0x333a4d);
-  addBox(30, 5, 30, 6, 0.6, 6, 0x333a4d);
-  addBox(-24, 0, -30, 3, 1.6, 3, 0xffffff);
-  addBox(-21, 0, -27, 3, 3.2, 3, 0xdddddd);
-  addBox(24, 0, 30, 3, 1.6, 3, 0xffffff);
-  addBox(21, 0, 27, 3, 3.2, 3, 0xdddddd);
-
-  // decorative towers
-  for (const [x, z] of [[-55, -55], [55, -55], [-55, 55], [55, 55]])
-    addBox(x, 0, z, 5, 11, 5, 0x555a73);
-
-  // spawn points (open-ish locations)
-  [[-50, -50], [50, 50], [-50, 50], [50, -50], [0, -45], [0, 45], [-40, 0], [40, 0],
-   [-22, -45], [22, 45], [-22, 45], [22, -45], [-8, 10], [8, -10], [-35, 25], [35, -25]]
+  // spawn points: T courtyard, CT spawn and the two sites
+  [[-20, 52], [20, 52], [0, 56], [-40, 46], [40, 46], [-8, 50], [8, 50],
+   [0, -52], [-12, -55], [12, -55], [-12, -42], [12, -42],
+   [40, -32], [-40, -32], [46, -46], [-46, -46]]
     .forEach(p => spawnPoints.push(new THREE.Vector3(p[0], 0, p[1])));
 }
 buildMap();
 
-function neon(x, y, z, w, h, d, color, opacity = 1) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity }));
-  m.position.set(x, y + h / 2, z); scene.add(m); return m;
-}
-neon(0, 0.03, 0, 1.2, 0.04, ARENA * 2, 0x38bdf8, 0.35);
-neon(0, 0.03, 0, ARENA * 2, 0.04, 1.2, 0x38bdf8, 0.35);
-neon(0, 6.4, 0, 14.25, 0.3, 14.25, 0xf472b6);
-neon(0, 7.9, 0, 6.2, 0.2, 6.2, 0x38bdf8);
-for (const [x, z] of [[-55, -55], [55, -55], [-55, 55], [55, 55]]) {
-  neon(x, 9.5, z, 5.3, 0.4, 5.3, 0x38bdf8);
-  neon(x, 5.5, z, 5.3, 0.25, 5.3, 0xf472b6);
-  neon(x, 11, z, 2, 0.8, 2, 0xfff2b0);
-}
-
 // jump pads: step on one to be launched
-const pads = [[-36, -18], [36, 18], [18, -36], [-18, 36]].map(([x, z]) => {
+const pads = [[44, -34], [-44, -34]].map(([x, z]) => {
   const base = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.15, 24), new THREE.MeshBasicMaterial({ color: 0x0ea5e9 }));
   base.position.set(x, 0.08, z); scene.add(base);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.5, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
@@ -379,8 +387,8 @@ function addPickup(x, z, kind) {
   g.position.set(x, 1, z); scene.add(g);
   pickups.push({ g, kind, x, z, t: 0 });
 }
-[[-26, 2], [26, -2], [0, -12], [0, 12]].forEach(p => addPickup(p[0], p[1], "hp"));
-[[-40, -38], [40, 38], [-38, 36], [38, -36]].forEach(p => addPickup(p[0], p[1], "ammo"));
+[[0, -28], [-40, -20], [40, -20], [0, 52]].forEach(p => addPickup(p[0], p[1], "hp"));
+[[-42, 10], [44, 10], [-22, 10], [22, 10]].forEach(p => addPickup(p[0], p[1], "ammo"));
 
 // static top-down image of the arena for the minimap
 const MAP_PX = 4;
@@ -388,13 +396,13 @@ const mapImg = document.createElement("canvas");
 mapImg.width = mapImg.height = ARENA * 2 * MAP_PX;
 {
   const g = mapImg.getContext("2d");
-  g.fillStyle = "#223247"; g.fillRect(0, 0, mapImg.width, mapImg.height);
+  g.fillStyle = "#3b3326"; g.fillRect(0, 0, mapImg.width, mapImg.height);
   g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = 1;
   for (let i = 0; i <= ARENA * 2; i += 10) {
     g.beginPath(); g.moveTo(i * MAP_PX, 0); g.lineTo(i * MAP_PX, mapImg.height); g.moveTo(0, i * MAP_PX); g.lineTo(mapImg.width, i * MAP_PX); g.stroke();
   }
   boxes.slice(4).forEach(b => {   // first 4 boxes are the outer walls
-    g.fillStyle = b.max.y > 9 ? "#a9b3d1" : b.max.y > 5 ? "#8792b0" : b.max.y > 2.5 ? "#6b7794" : "#52607c";
+    g.fillStyle = b.max.y > 5 ? "#d8c08a" : b.max.y > 2.5 ? "#a98f5e" : "#7d6845";
     g.fillRect((b.min.x + ARENA) * MAP_PX, (b.min.z + ARENA) * MAP_PX, (b.max.x - b.min.x) * MAP_PX, (b.max.z - b.min.z) * MAP_PX);
   });
   g.fillStyle = "#22d3ee";
@@ -534,6 +542,50 @@ function pickSpawn() {
   return best.clone();
 }
 
+// ---------------------------------------------------------------- bot navigation (flow field toward the player)
+const NAV_N = ARENA * 2;
+const navBlocked = new Uint8Array(NAV_N * NAV_N), navDist = new Int16Array(NAV_N * NAV_N), navQ = new Int32Array(NAV_N * NAV_N);
+const NAV_DX = [1, -1, 0, 0, 1, 1, -1, -1], NAV_DZ = [0, 0, 1, -1, 1, -1, 1, -1];
+for (let cz = 0; cz < NAV_N; cz++) for (let cx = 0; cx < NAV_N; cx++) {
+  const x0 = cx - ARENA - 0.45, x1 = cx - ARENA + 1.45, z0 = cz - ARENA - 0.45, z1 = cz - ARENA + 1.45;
+  for (const b of boxes) if (b.max.y > 0.6 && x1 > b.min.x && x0 < b.max.x && z1 > b.min.z && z0 < b.max.z) { navBlocked[cz * NAV_N + cx] = 1; break; }
+}
+let navCell = -1, navT = 0;
+function updateFlow(dt) {
+  navT -= dt;
+  const cx = clamp(Math.floor(player.pos.x + ARENA), 0, NAV_N - 1), cz = clamp(Math.floor(player.pos.z + ARENA), 0, NAV_N - 1), idx = cz * NAV_N + cx;
+  if (idx === navCell || navT > 0) return;
+  navCell = idx; navT = 0.3;
+  navDist.fill(-1);
+  let h = 0, t = 0;
+  navQ[t++] = idx; navDist[idx] = 0;
+  while (h < t) {
+    const c = navQ[h++], x = c % NAV_N, z = (c / NAV_N) | 0, d = navDist[c] + 1;
+    for (let k = 0; k < 8; k++) {
+      const nx = x + NAV_DX[k], nz = z + NAV_DZ[k];
+      if (nx < 0 || nz < 0 || nx >= NAV_N || nz >= NAV_N) continue;
+      const q = nz * NAV_N + nx;
+      if (navDist[q] >= 0 || navBlocked[q]) continue;
+      if (k >= 4 && (navBlocked[z * NAV_N + nx] || navBlocked[nz * NAV_N + x])) continue;
+      navDist[q] = d; navQ[t++] = q;
+    }
+  }
+}
+// centre of the neighbouring cell that is closest to the player by walking distance
+function flowStep(b) {
+  const x = clamp(Math.floor(b.pos.x + ARENA), 0, NAV_N - 1), z = clamp(Math.floor(b.pos.z + ARENA), 0, NAV_N - 1), c = z * NAV_N + x;
+  let best = navDist[c] >= 0 ? navDist[c] : 1e9, bx = -1, bz = -1;
+  for (let k = 0; k < 8; k++) {
+    const nx = x + NAV_DX[k], nz = z + NAV_DZ[k];
+    if (nx < 0 || nz < 0 || nx >= NAV_N || nz >= NAV_N) continue;
+    const d = navDist[nz * NAV_N + nx];
+    if (d < 0 || d >= best) continue;
+    if (k >= 4 && (navBlocked[z * NAV_N + nx] || navBlocked[nz * NAV_N + x])) continue;
+    best = d; bx = nx; bz = nz;
+  }
+  return bx < 0 ? null : { x: bx - ARENA + 0.5, z: bz - ARENA + 0.5 };
+}
+
 // ---------------------------------------------------------------- bots
 const bots = [];
 const botMeshParts = {};
@@ -601,6 +653,7 @@ function hasLOS(from, to) {
 
 function updateBots(dt) {
   if (matchOverT > 0) return;
+  updateFlow(dt);
   for (const b of bots) {
     if (!b.alive) {
       b.respawnT -= dt;
@@ -642,9 +695,9 @@ function updateBots(dt) {
       mx = fwd.x * fwdAmt * 0.8 + side.x * b.strafe;
       mz = fwd.z * fwdAmt * 0.8 + side.z * b.strafe;
     } else {
-      mx = fwd.x; mz = fwd.z;
-      // zig-zag a bit so they don't get stuck on straight walls
-      mx += side.x * b.strafe * 0.5; mz += side.z * b.strafe * 0.5;
+      // no line of sight: follow the flow field around walls toward the player
+      const step = flowStep(b);
+      if (step) { mx = step.x - b.pos.x; mz = step.z - b.pos.z; } else { mx = fwd.x; mz = fwd.z; }
     }
     const ml = Math.hypot(mx, mz) || 1;
     b.vel.x = mx / ml * speed; b.vel.z = mz / ml * speed;
@@ -1418,7 +1471,7 @@ function loop() {
   } else {
     // idle menu camera orbit
     const t = performance.now() * 0.0001;
-    camera.position.set(Math.sin(t) * 45, 22, Math.cos(t) * 45);
+    camera.position.set(Math.sin(t) * 55, 48, Math.cos(t) * 55);
     camera.lookAt(0, 3, 0);
     gunGroup.visible = false;
   }
@@ -1429,7 +1482,7 @@ function loop() {
 loop();
 
 // expose for debugging/tests
-window.__game = { player, bots, boxes, scene, camera, setBotCount, net };
+window.__game = { player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
 })();
 </script>
 </body>

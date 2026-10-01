@@ -23,6 +23,7 @@ Hold Tab for the scoreboard. Esc leaves the match.
 
 ## Features
 
+- Dust II-style map: T spawn in the south, CT spawn in the north, long A, short A, mid doors, B tunnels and two bomb-site style areas. Bots path around walls.
 - Minimap (top left) that rotates with you. Enemies show up on it while they can see you or just fired.
 - Live leaderboard under the minimap, Tab for the full scoreboard. Solo is first to 25 kills, then the match resets.
 - Kill streaks, multi-kill banners, floating damage numbers, screen shake.
