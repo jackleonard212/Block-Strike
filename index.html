@@ -121,7 +121,7 @@
   <p id="note">Fast, blocky arena FPS. Play solo against bots or online with friends.</p>
   <div class="opts">
     <label>Mode
-      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer</option></select>
+      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer (needs a server)</option></select>
     </label>
     <label class="solo-only">Bots
       <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
@@ -662,7 +662,7 @@ function makeBot(i) {
   const tag = nameTag(name);
   g.add(tag);
   const bot = {
-    id: i, name, group: g, kills: 0, deaths: 0, lastShot: -1e9, legL, legR, body, head,
+    id: i, name, group: g, kills: 0, deaths: 0, lastShot: -1e9, tgt: null, legL, legR, body, head,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), onGround: false,
     hp: 100, alive: true, yaw: 0, cd: rand(0.5, 1.5), repath: 0, strafe: Math.random() < 0.5 ? 1 : -1,
     strafeT: rand(1, 2.5), los: false, losT: 0, respawnT: 0, stuck: 0, walk: 0, reactT: 0,
@@ -675,7 +675,7 @@ function spawnBot(b) {
   const sp = pickSpawn();
   // keep bots away from player on spawn
   for (let tries = 0; tries < 6 && sp.distanceTo(player.pos) < 25; tries++) sp.copy(pickSpawn());
-  b.pos.copy(sp); b.vel.set(0, 0, 0); b.hp = 100; b.alive = true; b.group.visible = true; b.reactT = 0;
+  b.pos.copy(sp); b.vel.set(0, 0, 0); b.hp = 100; b.alive = true; b.group.visible = true; b.reactT = 0; b.tgt = null;
 }
 function setBotCount(n) {
   while (bots.length > n) { const b = bots.pop(); scene.remove(b.group); }
@@ -692,6 +692,19 @@ function hasLOS(from, to) {
   return tmpRay.intersectObjects(wallMeshes, false).length === 0;
 }
 
+const PLAYER_T = { isPlayer: true };   // marker meaning "this bot is targeting the player"
+
+// bots can hurt each other too; the kill goes on the shooter's score
+function damageBot(o, d, by) {
+  if (!o.alive) return;
+  o.hp -= d;
+  if (o.hp > 0) { o.tgt = by; o.reactT = Math.min(o.reactT, 0.2); return; }   // hit: turn on the attacker
+  o.alive = false; o.group.visible = false; o.respawnT = 3; o.deaths++; by.kills++;
+  burst(o.pos.clone().add(new THREE.Vector3(0, 1, 0)), botColors[o.id % botColors.length], 14, 5);
+  feed(`${by.name} → ${o.name}`);
+  checkWin();
+}
+
 function updateBots(dt) {
   if (matchOverT > 0) return;
   updateFlow(dt);
@@ -703,36 +716,53 @@ function updateBots(dt) {
     }
     const toP = tmpA.set(player.pos.x - b.pos.x, 0, player.pos.z - b.pos.z);
     const dist = toP.length();
-    // LOS check throttled
+    if (b.tgt && b.tgt !== PLAYER_T && !b.tgt.alive) b.tgt = null;
+    if (b.tgt === PLAYER_T && !player.alive) b.tgt = null;
+
+    // throttled sight checks: can it see the player, and who is the closest visible enemy (player or another bot)
     b.losT -= dt;
     if (b.losT <= 0) {
       b.losT = 0.15;
-      const eye = tmpB.set(b.pos.x, b.pos.y + 1.6, b.pos.z);
+      const eye = new THREE.Vector3(b.pos.x, b.pos.y + 1.6, b.pos.z);
       const pe = new THREE.Vector3(player.pos.x, player.pos.y + eyeHeight() * 0.8, player.pos.z);
-      const was = b.los;
       b.los = player.alive && dist < 90 && hasLOS(eye, pe);
-      if (b.los && !was) b.reactT = rand(0.25, 0.6) / diff;
+      let best = null, bd = 1e9;
+      if (b.los) { best = PLAYER_T; bd = dist; }
+      for (const o of bots) {
+        if (o === b || !o.alive) continue;
+        const d = Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z);
+        if (d < bd && d < 70 && hasLOS(eye, new THREE.Vector3(o.pos.x, o.pos.y + 1.3, o.pos.z))) { best = o; bd = d; }
+      }
+      if (best !== b.tgt) b.reactT = rand(0.25, 0.6) / diff;
+      b.tgt = best;
     }
+
+    // current target: another bot, the player, or (with nothing in sight) head for the player
+    const tgt = b.tgt;
+    let tx = player.pos.x, tz = player.pos.z, tdist = dist;
+    if (tgt && tgt !== PLAYER_T) { tx = tgt.pos.x; tz = tgt.pos.z; tdist = Math.hypot(tx - b.pos.x, tz - b.pos.z); }
+    const tv = new THREE.Vector3(tx - b.pos.x, 0, tz - b.pos.z);
+
     // aim
-    const targetYaw = Math.atan2(-toP.x, -toP.z);
+    const targetYaw = Math.atan2(-tv.x, -tv.z);
     let dy = targetYaw - b.yaw;
     while (dy > Math.PI) dy -= Math.PI * 2;
     while (dy < -Math.PI) dy += Math.PI * 2;
-    b.yaw += dy * Math.min(1, dt * (b.los ? 8 : 3) * diff);
+    b.yaw += dy * Math.min(1, dt * (tgt ? 8 : 3) * diff);
 
     // movement
     let mx = 0, mz = 0;
     const speed = 5.2 * (0.85 + 0.15 * diff);
-    const fwd = toP.clone().normalize();
+    const fwd = tv.clone().normalize();
     const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
     b.strafeT -= dt;
     if (b.strafeT <= 0) { b.strafe *= -1; b.strafeT = rand(0.8, 2.5); }
-    if (!player.alive) {
+    if (!tgt && !player.alive) {
       // wander
       mx = Math.sin(gameTime * 0.5 + b.id) * 0.5; mz = Math.cos(gameTime * 0.4 + b.id) * 0.5;
-    } else if (b.los) {
+    } else if (tgt) {
       const ideal = 14 + (b.id % 4) * 4;
-      const fwdAmt = dist > ideal + 3 ? 1 : dist < ideal - 5 ? -1 : 0;
+      const fwdAmt = tdist > ideal + 3 ? 1 : tdist < ideal - 5 ? -1 : 0;
       mx = fwd.x * fwdAmt * 0.8 + side.x * b.strafe;
       mz = fwd.z * fwdAmt * 0.8 + side.z * b.strafe;
     } else {
@@ -757,15 +787,22 @@ function updateBots(dt) {
 
     // shooting
     b.cd -= dt; b.reactT -= dt;
-    if (b.los && player.alive && b.reactT <= 0 && b.cd <= 0 && dist < 60) {
+    if (tgt && b.reactT <= 0 && b.cd <= 0 && tdist < 60) {
       b.cd = rand(0.18, 0.4) / diff + 0.05;
-      b.lastShot = performance.now();
       sfx.botShot(clamp(0.3 - dist / 200, 0.03, 0.3));
-      const acc = clamp(0.55 * diff - dist / 120, 0.1, 0.8);
+      const acc = clamp(0.55 * diff - tdist / 120, 0.1, 0.8);
       const from = new THREE.Vector3(b.pos.x, b.pos.y + 1.4, b.pos.z);
-      const to = new THREE.Vector3(player.pos.x, player.pos.y + 1.0, player.pos.z);
-      spawnTracer(from, to.clone().add(new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(1.5 * (1 - acc))), 0xff6666);
-      if (Math.random() < acc) damagePlayer(7 + Math.random() * 3, b);
+      const jitter = () => new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(1.5 * (1 - acc));
+      if (tgt === PLAYER_T) {
+        b.lastShot = performance.now();   // shows up on your radar
+        const to = new THREE.Vector3(player.pos.x, player.pos.y + 1.0, player.pos.z);
+        spawnTracer(from, to.add(jitter()), 0xff6666);
+        if (Math.random() < acc) damagePlayer(7 + Math.random() * 3, b);
+      } else {
+        const to = new THREE.Vector3(tgt.pos.x, tgt.pos.y + 1.0, tgt.pos.z);
+        spawnTracer(from, to.add(jitter()), 0xffb066);
+        if (Math.random() < acc * 0.8) damageBot(tgt, 7 + Math.random() * 3, b);
+      }
     }
   }
 }
@@ -1159,7 +1196,7 @@ function netConnect(url, name) {
     if (net.ws !== ws) return;
     const joined = net.on;
     netDisconnect();
-    setNote(joined ? "Disconnected from the server." : "Could not connect to " + url + ". Is server.js running?", true);
+    setNote(joined ? "Disconnected from the server." : "Could not connect to " + url + ". Is server.js running? Pick Solo (bots) to play without a server.", true);
     if (document.pointerLockElement) document.exitPointerLock();
   };
 }
@@ -1292,6 +1329,7 @@ function syncMode() {
   const mp = $("mode").value === "mp";
   document.querySelectorAll(".solo-only").forEach(e => e.style.display = mp ? "none" : "");
   document.querySelectorAll(".mp-only").forEach(e => e.style.display = mp ? "" : "none");
+  $("play").textContent = mp ? "JOIN SERVER" : "PLAY SOLO";
 }
 $("mode").addEventListener("change", () => { syncMode(); if ($("mode").value === "mp") refreshServers(); });
 syncMode();
@@ -1378,7 +1416,7 @@ $("srvAdd").addEventListener("click", () => {
   renderServers(); refreshServers();
 });
 loadServers(); renderServers();
-fetch("servers.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
+if (isHttp) fetch("servers.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
   if (Array.isArray(list) && list.length) { loadServers(list); renderServers(); }
 }).catch(() => { /* no servers.json next to the page */ });
 
