@@ -7,23 +7,29 @@ Two files:
 - `index.html` is the whole game, one file you can paste into any editor. It loads three.js from a CDN, so it needs internet.
 - `server.js` is the optional multiplayer server. It has no dependencies, only Node 14 or newer.
 
-## Quick start
+## Play with friends (nothing to install)
 
-Install [Node.js](https://nodejs.org) once, then double-click:
+1. Open the game, set **Mode** to **Multiplayer** and click **HOST A ROOM**. You get a 5-letter code.
+2. Send the code (or **COPY LINK**) to your friends. They open the game, type the code and press **PLAY ONLINE**.
+3. Press **PLAY ONLINE** yourself to jump in. Keep your tab open, because your browser is the server.
 
-- **Windows:** `start.bat`
+Everything runs in the browsers, peer to peer, through the free public PeerJS service, so it needs an internet connection. Up to 16 players. If a friend can't connect, a strict network or VPN is the usual cause.
+
+## Dedicated server (optional)
+
+For a server that stays up without a host player, run `server.js` on any machine with [Node.js](https://nodejs.org):
+
+- **Windows:** double-click `start.bat`
 - **Mac:** `start.command` (first time: right-click, Open)
 - **Linux:** `start.sh`
 
-It starts the server and opens the game in your browser. Close the window to stop the server. `npm start` does the same without opening the browser.
-
-A website can't start programs on your computer, so the server has to be started this way, or kept running on a machine that's always on (any host that can run `node server.js` and gives you a `wss://` address).
+It starts the server and opens the game in your browser. `npm start` does the same without opening the browser. Add the address under **ADVANCED · DEDICATED SERVERS** in the menu.
 
 ## Solo (bots)
 
 Open `index.html` in a desktop browser, pick "Solo (bots)" and click Play.
 
-## Multiplayer
+## Multiplayer with Node
 
 ```
 node server.js            # or: PORT=4000 node server.js

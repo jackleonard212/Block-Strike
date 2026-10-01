@@ -68,6 +68,17 @@
   .dn{position:absolute;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 3px #000;animation:dn .8s ease-out forwards;transform:translate(-50%,-50%)}
   .dn.h{color:#facc15;font-size:30px}
   @keyframes dn{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-60px}}
+  #rooms{width:min(660px,92vw);margin-top:14px;background:rgba(0,0,0,.35);border:1px solid rgba(244,114,182,.4);border-radius:8px;padding:10px 12px}
+  #rooms .srv-head{font-size:12px;letter-spacing:2px;opacity:.9;margin-bottom:8px}
+  #rooms .room-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  #rooms button{font:inherit;font-size:13px;font-weight:800;letter-spacing:1px;padding:7px 14px;background:#f472b6;color:#111;border:0;border-radius:4px;cursor:pointer}
+  #rooms button.alt{background:#2a2a44;color:#fff;border:1px solid #556;padding:5px 10px;font-size:12px}
+  #rooms button:disabled{opacity:.5;cursor:default}
+  #rooms #roomCode{width:120px;text-transform:uppercase;letter-spacing:5px;font-weight:800;text-align:center;font-size:18px}
+  #rooms .hint{font-size:12px;opacity:.7}
+  #hostInfo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:800}
+  #hostInfo .code{font-size:26px;letter-spacing:6px;color:#facc15}
+  #servers summary{cursor:pointer;font-size:12px;letter-spacing:2px;opacity:.85;margin-bottom:6px}
   #servers{width:min(660px,92vw);margin-top:14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px}
   #servers .srv-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:2px;opacity:.85;margin-bottom:6px}
   #servers button{font:inherit;font-size:12px;font-weight:800;letter-spacing:1px;padding:4px 10px;background:#2a2a44;color:#fff;border:1px solid #556;border-radius:4px;cursor:pointer}
@@ -119,10 +130,10 @@
 
 <div id="menu">
   <h1>BLOCKSTRIKE</h1>
-  <p id="note">Fast, blocky arena FPS. Play solo against bots or online with friends.</p>
+  <p id="note">Fast, blocky arena FPS. Play solo against bots, or host a room and share the code.</p>
   <div class="opts">
     <label>Mode
-      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer (needs a server)</option></select>
+      <select id="mode"><option value="solo" selected>Solo (bots)</option><option value="mp">Multiplayer</option></select>
     </label>
     <label class="solo-only">Bots
       <select id="botCount"><option>4</option><option selected>8</option><option>12</option><option>16</option></select>
@@ -133,9 +144,6 @@
     <label class="mp-only">Name
       <input id="pname" maxlength="12" value="Player">
     </label>
-    <label class="mp-only">Selected
-      <input id="server" value="ws://localhost:3000" spellcheck="false">
-    </label>
     <label>Sensitivity
       <input id="sens" type="range" min="0.3" max="3" step="0.1" value="1">
     </label>
@@ -143,7 +151,23 @@
       <input id="fov" type="range" min="70" max="110" step="1" value="85">
     </label>
   </div>
-  <div id="servers" class="mp-only">
+  <div id="rooms" class="mp-only">
+    <div class="srv-head">PLAY WITH FRIENDS · NO INSTALL NEEDED</div>
+    <div class="room-row">
+      <button id="hostBtn" type="button">HOST A ROOM</button>
+      <div id="hostInfo"></div>
+      <span class="hint">You host in your browser. Friends join with your code.</span>
+    </div>
+    <div class="room-row">
+      <input id="roomCode" placeholder="CODE" maxlength="5" autocomplete="off" spellcheck="false">
+      <span class="hint">Got a friend's room code? Type it here, then press PLAY ONLINE.</span>
+    </div>
+  </div>
+  <details id="servers" class="mp-only">
+    <summary>ADVANCED · DEDICATED SERVERS</summary>
+    <label style="display:block;margin-bottom:8px;font-size:13px">Selected server
+      <input id="server" value="ws://localhost:3000" spellcheck="false" style="width:260px">
+    </label>
     <div class="srv-head"><span>SERVERS</span><button id="srvRefresh" type="button">REFRESH</button></div>
     <div id="srvList"></div>
     <div id="srvHint"></div>
@@ -152,7 +176,7 @@
       <input id="srvAddr" placeholder="ws://host:3000 or wss://host" spellcheck="false" autocomplete="off">
       <button id="srvAdd" type="button">ADD</button>
     </div>
-  </div>
+  </details>
   <div class="btn" id="play">CLICK TO PLAY</div>
   <table>
     <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
@@ -166,6 +190,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -1144,7 +1169,7 @@ function updateWorld(dt) {
 // The server (server.js) owns health, kills and respawns. Clients send their own
 // position 20x/second and report hits; everything else is relayed.
 const net = {
-  ws: null, on: false, serverName: "", id: null, remotes: new Map(), sendT: 0, board: [],
+  ws: null, on: false, local: false, serverName: "", id: null, remotes: new Map(), sendT: 0, board: [],
   send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
 };
 
@@ -1179,9 +1204,178 @@ function removeRemote(id) {
   scene.remove(r.g); net.remotes.delete(id);
 }
 
+// ---------------------------------------------------------------- in-browser hosting (no server needed)
+// One player's browser acts as the server: it owns health, kills and respawns, exactly like server.js.
+// Friends connect to it peer-to-peer through PeerJS using a 5-letter room code.
+let host = null;
+function tickTimer(fn, ms) {   // a worker keeps ticking even when the host's tab is in the background
+  try {
+    const w = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(1)}," + ms + ")"], { type: "text/javascript" })));
+    w.onmessage = () => fn();
+    return () => w.terminate();
+  } catch (e) { const id = setInterval(fn, ms); return () => clearInterval(id); }
+}
+function createHostCore(serverName) {
+  const MAX = 16, RESPAWN_MS = 3000, REGEN_DELAY_MS = 5000;
+  const COLORS = [0xef4444, 0xf97316, 0xa855f7, 0x3b82f6, 0x14b8a6, 0xeab308, 0xec4899, 0x22c55e];
+  const SPAWNS = spawnPoints.map(v => [v.x, v.z]);
+  const players = new Map();
+  let nextId = 1, tick = 0;
+  const send = (p, obj) => p.conn.out(JSON.stringify(obj));
+  const broadcast = (obj, except) => { const str = JSON.stringify(obj); for (const p of players.values()) if (p !== except) p.conn.out(str); };
+  const spawnFor = self => {
+    const pool = SPAWNS.slice().sort(() => Math.random() - 0.5).slice(0, 6);
+    let best = pool[0], bestD = -1;
+    for (const sp of pool) {
+      let d = 1e9;
+      for (const p of players.values()) if (p !== self && p.alive) d = Math.min(d, Math.hypot(p.x - sp[0], p.z - sp[1]));
+      if (d > bestD) { bestD = d; best = sp; }
+    }
+    return best;
+  };
+  const sendBoard = () => broadcast({ t: "board", rows: [...players.values()].map(p => ({ id: p.id, name: p.name, k: p.k, d: p.d })) });
+
+  function receive(conn, m) {
+    let p = conn.player;
+    if (m.t === "join" && !p) {
+      if (players.size >= MAX) { conn.out(JSON.stringify({ t: "full" })); return; }
+      const name = String(m.name || "Player").replace(/[^\w \-.]/g, "").slice(0, 12) || "Player";
+      const id = nextId++, sp = spawnFor(null);
+      p = conn.player = { id, name, conn, color: COLORS[id % COLORS.length], x: sp[0], y: 0, z: sp[1], yaw: 0, pitch: 0, w: 0, cr: 0, hp: 100, alive: true, k: 0, d: 0, lastHurt: 0, respawnAt: 0, hits: 0 };
+      send(p, { t: "welcome", id, name, spawn: sp, server: serverName,
+        players: [...players.values()].map(o => ({ id: o.id, name: o.name, color: o.color, x: o.x, y: o.y, z: o.z, alive: o.alive })) });
+      players.set(id, p);
+      broadcast({ t: "join", id, name, color: p.color, x: p.x, y: 0, z: p.z, alive: true }, p);
+      sendBoard();
+      return;
+    }
+    if (!p) return;
+    if (m.t === "st" && p.alive) {
+      if ([m.x, m.y, m.z, m.yaw, m.pitch].every(Number.isFinite)) { p.x = m.x; p.y = m.y; p.z = m.z; p.yaw = m.yaw; p.pitch = m.pitch; p.w = m.w | 0; p.cr = m.c ? 1 : 0; }
+    } else if (m.t === "shot" && p.alive) {
+      broadcast({ t: "shot", id: p.id, f: m.f, e: m.e, w: m.w }, p);
+    } else if (m.t === "hit" && p.alive) {
+      const target = players.get(m.id), dmg = Number(m.dmg);
+      if (!target || target === p || !target.alive || !(dmg > 0) || dmg > 250) return;
+      if (++p.hits > 60) return;
+      target.hp -= dmg; target.lastHurt = Date.now();
+      if (target.hp > 0) return broadcast({ t: "dmg", id: target.id, hp: Math.round(target.hp), by: p.id });
+      target.hp = 0; target.alive = false; target.d++; p.k++;
+      target.respawnAt = Date.now() + RESPAWN_MS;
+      broadcast({ t: "dmg", id: target.id, hp: 0, by: p.id });
+      broadcast({ t: "kill", killer: p.id, victim: target.id, kn: p.name, vn: target.name, head: !!m.head });
+      sendBoard();
+    }
+  }
+  function drop(conn) {
+    const p = conn.player;
+    if (!p || !players.has(p.id)) return;
+    players.delete(p.id); conn.player = null;
+    broadcast({ t: "leave", id: p.id, name: p.name });
+    sendBoard();
+  }
+  const stopTick = tickTimer(() => {
+    tick++;
+    const now = Date.now();
+    for (const p of players.values()) {
+      if (!p.alive && now >= p.respawnAt) {
+        const sp = spawnFor(p);
+        p.alive = true; p.hp = 100; p.x = sp[0]; p.y = 0; p.z = sp[1]; p.lastHurt = 0;
+        broadcast({ t: "spawn", id: p.id, pos: sp });
+      }
+      if (tick % 5 === 0 && p.alive && p.hp < 100 && now - p.lastHurt > REGEN_DELAY_MS) {
+        p.hp = Math.min(100, p.hp + 3);
+        send(p, { t: "dmg", id: p.id, hp: Math.round(p.hp), regen: 1 });
+      }
+      if (tick % 20 === 0) p.hits = 0;
+    }
+    if (players.size) broadcast({ t: "s", p: [...players.values()].map(p => [p.id, r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), p.w, p.cr, p.alive ? 1 : 0]) });
+  }, 50);
+  return { connect: out => ({ out, player: null }), receive, drop, count: () => players.size, stop() { stopTick(); players.clear(); } };
+}
+
+// sockets that look like a WebSocket (readyState, send, close, onopen/onmessage/onclose)
+function loopbackSocket(core) {   // the host's own player talks to the in-page server directly
+  const w = { readyState: 1, onopen: null, onmessage: null, onclose: null, onerror: null,
+    send: str => { try { core.receive(conn, JSON.parse(str)); } catch (e) { /* ignore */ } },
+    close: () => core.drop(conn) };
+  const conn = core.connect(str => setTimeout(() => w.onmessage && w.onmessage({ data: str }), 0));
+  setTimeout(() => w.onopen && w.onopen(), 0);
+  return w;
+}
+function peerSocket(code) {   // a friend connecting to a host's room
+  const w = { readyState: 0, onopen: null, onmessage: null, onclose: null, onerror: null, send() {}, close() {} };
+  const fail = () => { if (w.readyState === 3) return; w.readyState = 3; w.onclose && w.onclose(); };
+  if (!window.Peer) { setTimeout(fail, 0); return w; }
+  const peer = new Peer();
+  w.close = () => { w.readyState = 3; try { peer.destroy(); } catch (e) { /* ignore */ } };
+  const timer = setTimeout(() => { if (w.readyState === 0) { try { peer.destroy(); } catch (e) { /* ignore */ } fail(); } }, 15000);
+  peer.on("open", () => {
+    const conn = peer.connect("bs-" + code, { reliable: true });
+    conn.on("open", () => {
+      clearTimeout(timer); w.readyState = 1;
+      w.send = str => { try { conn.send(str); } catch (e) { /* closed */ } };
+      w.close = () => { w.readyState = 3; try { conn.close(); peer.destroy(); } catch (e) { /* ignore */ } };
+      w.onopen && w.onopen();
+    });
+    conn.on("data", d => w.onmessage && w.onmessage({ data: typeof d === "string" ? d : JSON.stringify(d) }));
+    conn.on("close", fail);
+    conn.on("error", fail);
+  });
+  peer.on("error", () => { clearTimeout(timer); fail(); });
+  return w;
+}
+function openSocket(url) {
+  if (url === "host:local") { if (!host) throw new Error("not hosting"); return loopbackSocket(host.core); }
+  if (url.startsWith("room:")) return peerSocket(url.slice(5));
+  return new WebSocket(url);
+}
+
+function makeCode() {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let c = ""; for (let i = 0; i < 5; i++) c += A[Math.floor(Math.random() * A.length)];
+  return c;
+}
+function startHosting() {
+  if (host) return Promise.resolve(host.code);
+  if (!window.Peer) return Promise.reject(new Error("The connection library didn't load, so rooms need an internet connection. Reload the page and try again."));
+  const attempt = n => new Promise((resolve, reject) => {
+    const code = makeCode();
+    const peer = new Peer("bs-" + code);
+    let opened = false;
+    const timer = setTimeout(() => { if (!opened) { try { peer.destroy(); } catch (e) { /* ignore */ } reject(new Error("Couldn't reach the connection service. Check your internet and try again.")); } }, 12000);
+    peer.on("open", () => {
+      opened = true; clearTimeout(timer);
+      host = { peer, core: createHostCore("Room " + code), code };
+      resolve(code);
+    });
+    peer.on("connection", conn => {
+      if (!host || host.peer !== peer) { try { conn.close(); } catch (e) { /* ignore */ } return; }
+      const c = host.core.connect(str => { try { conn.send(str); } catch (e) { /* closed */ } });
+      conn.on("data", d => { try { host && host.core.receive(c, typeof d === "string" ? JSON.parse(d) : d); } catch (e) { /* bad message */ } });
+      conn.on("close", () => host && host.core.drop(c));
+      conn.on("error", () => host && host.core.drop(c));
+    });
+    peer.on("error", err => {
+      if (opened) return;
+      clearTimeout(timer); try { peer.destroy(); } catch (e) { /* ignore */ }
+      if (err && err.type === "unavailable-id" && n < 3) resolve(attempt(n + 1));
+      else reject(new Error("Couldn't open a room (" + ((err && err.type) || "error") + ")."));
+    });
+  });
+  return attempt(0);
+}
+function stopHosting() {
+  if (!host) return;
+  const h = host; host = null;
+  if (net.local) netDisconnect();
+  h.core.stop();
+  try { h.peer.destroy(); } catch (e) { /* ignore */ }
+}
+
 function netDisconnect() {
   const ws = net.ws;
-  net.ws = null; net.on = false; net.serverName = ""; net.id = null;
+  net.ws = null; net.on = false; net.local = false; net.serverName = ""; net.id = null;
   if (ws) { ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null; try { ws.close(); } catch (e) { /* already closed */ } }
   for (const id of [...net.remotes.keys()]) removeRemote(id);
   net.board = [];
@@ -1190,15 +1384,18 @@ function netDisconnect() {
 function netConnect(url, name) {
   netDisconnect();
   let ws;
-  try { ws = new WebSocket(url); } catch (e) { setNote("That server address isn't valid.", true); document.exitPointerLock(); return; }
-  net.ws = ws;
+  try { ws = openSocket(url); } catch (e) { setNote("That server address isn't valid.", true); document.exitPointerLock(); return; }
+  net.ws = ws; net.local = url === "host:local";
   ws.onopen = () => ws.send(JSON.stringify({ t: "join", name }));
   ws.onmessage = e => { try { netHandle(JSON.parse(e.data)); } catch (err) { console.error(err); } };
   ws.onclose = () => {
     if (net.ws !== ws) return;
     const joined = net.on;
     netDisconnect();
-    setNote(joined ? "Disconnected from the server." : "Could not connect to " + url + ". Is server.js running? Pick Solo (bots) to play without a server.", true);
+    const room = url.startsWith("room:");
+    setNote(joined ? "Disconnected from the game."
+      : room ? "Couldn't find room " + url.slice(5) + ". Check the code, and make sure the host still has the game open."
+      : "Could not connect to " + url + ". Is server.js running? Pick Solo (bots), or host a room, to play without a server.", true);
     if (document.pointerLockElement) document.exitPointerLock();
   };
 }
@@ -1331,7 +1528,7 @@ function syncMode() {
   const mp = $("mode").value === "mp";
   document.querySelectorAll(".solo-only").forEach(e => e.style.display = mp ? "none" : "");
   document.querySelectorAll(".mp-only").forEach(e => e.style.display = mp ? "" : "none");
-  $("play").textContent = mp ? "JOIN SERVER" : "PLAY SOLO";
+  $("play").textContent = mp ? "PLAY ONLINE" : "PLAY SOLO";
 }
 $("mode").addEventListener("change", () => { syncMode(); if ($("mode").value === "mp") refreshServers(); });
 syncMode();
@@ -1384,7 +1581,7 @@ function renderServers() {
     row.append(n, a, st, x);
     row.addEventListener("click", ev => {
       if (ev.target === x && s.custom) { servers = servers.filter(o => o !== s); saveCustom(); renderServers(); return; }
-      $("server").value = s.addr;
+      $("server").value = s.addr; $("roomCode").value = "";
       try { localStorage.setItem(LAST_KEY, s.addr); } catch (e) { /* ignore */ }
       renderServers();
     });
@@ -1420,6 +1617,39 @@ $("srvAdd").addEventListener("click", () => {
   renderServers(); refreshServers();
 });
 loadServers(); renderServers();
+
+// ---------------------------------------------------------------- room UI
+function copyText(t) {
+  try { navigator.clipboard.writeText(t).then(() => setNote("Copied: " + t), () => setNote("Couldn't copy. Select it and press Ctrl+C.", true)); }
+  catch (e) { setNote("Couldn't copy. Select it and press Ctrl+C.", true); }
+}
+function uiButton(text, fn) { const b = document.createElement("button"); b.type = "button"; b.className = "alt"; b.textContent = text; b.addEventListener("click", fn); return b; }
+function renderHost() {
+  const info = $("hostInfo");
+  info.replaceChildren();
+  $("hostBtn").style.display = host ? "none" : "";
+  if (!host) return;
+  const code = document.createElement("span"); code.className = "code"; code.textContent = host.code;
+  info.append(code,
+    uiButton("COPY CODE", () => copyText(host.code)),
+    uiButton("COPY LINK", () => copyText(location.href.split("?")[0].split("#")[0] + "?room=" + host.code)),
+    uiButton("STOP HOSTING", () => { stopHosting(); renderHost(); setNote("Room closed."); }));
+}
+$("hostBtn").addEventListener("click", async () => {
+  $("hostBtn").disabled = true; setNote("Opening your room…");
+  try { await startHosting(); setNote("Your room is open. Share the code, then press PLAY ONLINE to jump in. Keep this tab open."); }
+  catch (e) { setNote(e.message || "Couldn't open a room.", true); }
+  $("hostBtn").disabled = false; renderHost();
+});
+$("roomCode").addEventListener("input", e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""); });
+// opening a shared link like ...?room=ABCDE goes straight to the join screen
+{
+  const link = (new URLSearchParams(location.search).get("room") || "").toUpperCase();
+  if (/^[A-Z2-9]{5}$/.test(link)) {
+    $("mode").value = "mp"; syncMode(); $("roomCode").value = link;
+    setNote("Room " + link + " is ready. Enter a name and press PLAY ONLINE.");
+  }
+}
 if (isHttp) fetch("servers.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
   if (Array.isArray(list) && list.length) { loadServers(list); renderServers(); }
 }).catch(() => { /* no servers.json next to the page */ });
@@ -1428,11 +1658,19 @@ $("play").addEventListener("click", () => {
   audio().resume();
   sens = parseFloat($("sens").value); diff = parseFloat($("diff").value);
   baseFov = parseFloat($("fov").value); fovCur = baseFov;
-  setNote("Fast, blocky arena FPS. Play solo against bots or online with friends.");
+  setNote("Fast, blocky arena FPS. Play solo against bots, or host a room and share the code.");
   if ($("mode").value === "mp") {
     const name = $("pname").value.trim() || "Player";
     try { localStorage.setItem("bs_name", name); } catch (e) { /* ignore */ }
-    netConnect($("server").value.trim(), name);
+    const code = $("roomCode").value.trim().toUpperCase();
+    let target;
+    if (host && (!code || code === host.code)) target = "host:local";
+    else if (code) {
+      if (!/^[A-Z2-9]{5}$/.test(code)) { setNote("Room codes are 5 letters and numbers.", true); return; }
+      target = "room:" + code;
+    } else target = $("server").value.trim();
+    if (!target) { setNote("Host a room, type a friend's room code, or pick a server.", true); return; }
+    netConnect(target, name);
   } else netDisconnect();
   try {
     const el = renderer.domElement;
