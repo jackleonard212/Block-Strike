@@ -83,6 +83,7 @@
   .srv .st.off{color:#ff7a7a}
   .srv .x{opacity:.5;text-align:center}
   .srv .x:hover{opacity:1;color:#ff7a7a}
+  #srvHint{font-size:12px;opacity:.8;margin-top:6px;color:#ffb066}
   #servers .srv-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
   #servers .srv-add input{flex:1 1 120px;min-width:0}
   #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
@@ -145,6 +146,7 @@
   <div id="servers" class="mp-only">
     <div class="srv-head"><span>SERVERS</span><button id="srvRefresh" type="button">REFRESH</button></div>
     <div id="srvList"></div>
+    <div id="srvHint"></div>
     <div class="srv-add">
       <input id="srvName" placeholder="Name" maxlength="32" autocomplete="off">
       <input id="srvAddr" placeholder="ws://host:3000 or wss://host" spellcheck="false" autocomplete="off">
@@ -1402,6 +1404,8 @@ async function refreshServers() {
     renderServers();
   }));
   srvBusy = false;
+  $("srvHint").textContent = servers.some(s => s.status && s.status.ok) ? "" :
+    "No servers are online right now. Pick Solo (bots) to play without one, or run start.bat / start.command / start.sh on your computer and press REFRESH.";
 }
 $("srvRefresh").addEventListener("click", refreshServers);
 $("server").addEventListener("input", renderServers);
