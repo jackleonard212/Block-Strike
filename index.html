@@ -68,6 +68,7 @@
   .dn{position:absolute;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 3px #000;animation:dn .8s ease-out forwards;transform:translate(-50%,-50%)}
   .dn.h{color:#facc15;font-size:30px}
   @keyframes dn{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-60px}}
+  #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
   #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
   #dashfill{display:block;height:100%;width:100%;background:#38bdf8}
@@ -88,6 +89,7 @@
   <canvas id="minimap" width="176" height="176"></canvas>
   <div id="lb"></div>
   <div id="dn"></div>
+  <div id="fps"></div>
   <div id="banner"></div>
   <div id="score"><span>KILLS <b id="kills">0</b></span><span>DEATHS <b id="deaths">0</b></span><span>⏱ <b id="time">0:00</b></span></div>
   <div id="feed"></div>
@@ -118,6 +120,9 @@
     </label>
     <label>Sensitivity
       <input id="sens" type="range" min="0.3" max="3" step="0.1" value="1">
+    </label>
+    <label>FOV
+      <input id="fov" type="range" min="70" max="110" step="1" value="85">
     </label>
   </div>
   <div class="btn" id="play">CLICK TO PLAY</div>
@@ -191,7 +196,7 @@ const sfx = {
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -321,17 +326,22 @@ function buildMap() {
   // ---- T spawn courtyard (z 36..60)
   crate(-24, 48, 5, 5, 2.4);
   crate( 24, 48, 5, 5, 2.4, MIL);
-  crate(  0, 46, 8, 3, 1.4, STONE);
+  crate(  0, 47, 6, 3, 1.4, STONE);
   crate(-40, 52, 4, 4, 3, MIL);
   crate( 40, 52, 4, 4, 3);
   crate(-12, 56, 3, 3, 1.6);
   crate( 12, 56, 3, 3, 1.6);
+
+  // wall across the courtyard with a gap in front of each main lane, plus front-yard cover
+  wall(-60, 44, -46, 44); wall(-36, 44, -6, 44); wall(6, 44, 36, 44); wall(46, 44, 60, 44);
+  crate(-30, 40, 4, 4, 2.4); crate(30, 40, 4, 4, 2.4, MIL); crate(0, 40, 5, 3, 1.8, STONE);
 
   // ---- mid
   crate(0, 24, 3, 3, 3, MIL);                       // xbox
   wall(-20, -16, -4, -16);                          // mid doors
   wall(  4, -16, 20, -16);
   addBox(0, 5.2, -16, 8.2, 2.8, 2, BLUE);           // lintel over the doors
+  wall( 19, -16,  19, -6);  wall(-19, -16, -19, -6);   // close the room in front of the mid doors
   block(-14, -25, 12, 18, 8);                       // CT mid corridor walls
   block( 14, -25, 12, 18, 8);
 
@@ -341,6 +351,7 @@ function buildMap() {
   crate(-10, -48, 4, 4, 2.4);
   crate( 10, -48, 4, 4, 2.4, MIL);
   crate(  0, -40, 6, 2, 1.4, STONE);
+  block(-17, -47, 3, 3, 8);  block(17, -47, 3, 3, 8);   // pillars
 
   // ---- A site (north-east) and B site (north-west), mirrored
   for (const sx of [1, -1]) {
@@ -350,7 +361,8 @@ function buildMap() {
     crate(sx * 36, -26, 4, 4, 1.6, MIL);
     crate(sx * 44, -14, 6, 6, 2.4);
     crate(sx * 40, -46, 5, 5, 3, MIL);
-    crate(sx * 30, -44, 3, 3, 1.6);
+    block(sx * 34, -36, 6, 14, 8);                 // long building splitting the site
+    crate(sx * 28, -47, 3, 3, 1.6);
     crate(sx * 52,  -2, 6, 6, 2.4);                // the pit
     crate(sx * 44, -10, 6, 2, 3, STONE);           // low wall guarding the long A exit
   }
@@ -511,12 +523,14 @@ const player = {
   hp: 100, alive: true, crouch: false, sliding: 0,
   kills: 0, deaths: 0,
   weapon: 0, ammo: WEAPONS.map(w => ({ mag: w.mag, res: w.reserve })),
-  reloading: 0, cooldown: 0, swingT: 0, prevWeapon: 0, ads: false, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0,
+  reloading: 0, cooldown: 0, swingT: 0, prevWeapon: 0, ads: false, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0, recoilP: 0, recoilY: 0, prev: new THREE.Vector3(0, 0, 45),
 };
 const R = 0.4, STAND_H = 1.8, CROUCH_H = 1.1;
 const keys = {};
 let mouseDown = false, playing = false, gameTime = 0, sens = 1, diff = 1;
-let shake = 0, fovKick = 0;
+let shake = 0, fovKick = 0, landDip = 0, baseFov = 85;
+let mouseDX = 0, mouseDY = 0;
+const sway = { x: 0, y: 0 };
 
 function playerHeight() { return player.crouch ? CROUCH_H : STAND_H; }
 function eyeHeight() { return playerHeight() - 0.15; }
@@ -524,6 +538,7 @@ function eyeHeight() { return playerHeight() - 0.15; }
 function respawnPlayer(spawn) {
   const sp = spawn || pickSpawn();
   player.pos.copy(sp); player.vel.set(0, 0, 0);
+  player.prev.copy(sp); player.recoilP = 0; player.recoilY = 0;
   player.hp = 100; player.alive = true; player.crouch = false; player.reloading = 0;
   player.ammo = WEAPONS.map(w => ({ mag: w.mag, res: w.reserve }));
   player.yaw = Math.atan2(sp.x, sp.z); player.pitch = 0;
@@ -823,8 +838,8 @@ function shoot() {
   if (hitAny) (headshot ? sfx.head : sfx.hit)();
   // recoil
   player.recoilKick += w.recoil;
-  player.pitch += w.recoil * (player.ads ? 0.5 : 1) * (0.6 + Math.random() * 0.4);
-  player.yaw += rand(-0.2, 0.2) * w.recoil;
+  player.recoilP += w.recoil * (player.ads ? 0.5 : 1) * (0.6 + Math.random() * 0.4);
+  player.recoilY += rand(-0.25, 0.25) * w.recoil;
   gunMeshes[player.weapon].getObjectByName("flash").visible = true;
   setTimeout(() => gunMeshes[player.weapon].getObjectByName("flash").visible = false, 40);
   if (a.mag <= 0 && a.res > 0) setTimeout(reload, 200);
@@ -1252,6 +1267,7 @@ $("mode").addEventListener("change", syncMode); syncMode();
 $("play").addEventListener("click", () => {
   audio().resume();
   sens = parseFloat($("sens").value); diff = parseFloat($("diff").value);
+  baseFov = parseFloat($("fov").value); fovCur = baseFov;
   setNote("Fast, blocky arena FPS. Play solo against bots or online with friends.");
   if ($("mode").value === "mp") {
     const name = $("pname").value.trim() || "Player";
@@ -1259,8 +1275,11 @@ $("play").addEventListener("click", () => {
     netConnect($("server").value.trim(), name);
   } else netDisconnect();
   try {
-    const r = renderer.domElement.requestPointerLock();
-    if (r && r.catch) r.catch(lockFailed);
+    const el = renderer.domElement;
+    const plain = () => { try { const r2 = el.requestPointerLock(); if (r2 && r2.catch) r2.catch(lockFailed); } catch (e2) { lockFailed(); } };
+    let r;
+    try { r = el.requestPointerLock({ unadjustedMovement: true }); } catch (e) { plain(); r = null; }
+    if (r && r.catch) r.catch(plain);
   } catch (e) { lockFailed(); }
 });
 function lockFailed() { netDisconnect(); setNote("Mouse capture was blocked. Click Play again, or use a desktop browser.", true); }
@@ -1279,10 +1298,21 @@ document.addEventListener("pointerlockchange", () => {
 });
 addEventListener("mousemove", e => {
   if (!playing || !player.alive) return;
-  const s = 0.0022 * sens * (player.ads ? WEAPONS[player.weapon].adsFov / 80 + 0.2 : 1);
-  player.yaw -= e.movementX * s;
-  player.pitch = clamp(player.pitch - e.movementY * s, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+  if (Math.abs(e.movementX) > 400 || Math.abs(e.movementY) > 400) return;   // ignore browser glitches
+  mouseDX += e.movementX; mouseDY += e.movementY;
 });
+// mouse movement is summed up and applied once per frame, scaled by zoom so aiming feels the same at any FOV
+function applyLook() {
+  if (!player.alive || (!mouseDX && !mouseDY)) { mouseDX = mouseDY = 0; return; }
+  const zoom = player.ads ? WEAPONS[player.weapon].adsFov / baseFov : 1;
+  const k = 0.0022 * sens * zoom;
+  player.yaw -= mouseDX * k;
+  player.pitch = clamp(player.pitch - mouseDY * k, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+  sway.x = clamp(sway.x + mouseDX * 0.0005, -0.06, 0.06);
+  sway.y = clamp(sway.y + mouseDY * 0.0005, -0.05, 0.05);
+  mouseDX = mouseDY = 0;
+}
+
 addEventListener("mousedown", e => {
   if (!playing) return;
   if (e.button === 0) { mouseDown = true; shoot(); }
@@ -1366,7 +1396,9 @@ function updatePlayer(dt) {
     player.vel.y -= GRAVITY * dt;
   }
 
+  const preVy = player.vel.y, wasGround = player.onGround;
   moveEntity(player, dt, R, playerHeight());
+  if (!wasGround && player.onGround && preVy < -6) landDip = Math.min(0.2, -preVy * 0.012);
 
   // jump pads and dash cooldown
   player.padCd -= dt;
@@ -1376,7 +1408,6 @@ function updatePlayer(dt) {
     }
   }
   player.dashCd = Math.max(0, player.dashCd - dt);
-  $("dashfill").style.width = (100 - player.dashCd / 2.5 * 100) + "%";
 
   // bob
   const sp = Math.hypot(player.vel.x, player.vel.z);
@@ -1410,16 +1441,23 @@ let fovCur = 80, camY = 1.65;
 function updateCamera(dt) {
   const w = WEAPONS[player.weapon];
   fovKick *= Math.pow(0.0005, dt);
-  const targetFov = (player.ads ? w.adsFov : 80 + (Math.hypot(player.vel.x, player.vel.z) > 10 ? 4 : 0)) + fovKick;
+  const targetFov = (player.ads ? w.adsFov : baseFov + (Math.hypot(player.vel.x, player.vel.z) > 10 ? 4 : 0)) + fovKick;
   fovCur += (targetFov - fovCur) * Math.min(1, dt * 14);
   if (Math.abs(camera.fov - fovCur) > 0.01) { camera.fov = fovCur; camera.updateProjectionMatrix(); }
 
   const targetY = player.alive ? eyeHeight() : 0.3;
   camY += (targetY - camY) * Math.min(1, dt * 14);
   const bobX = Math.sin(player.bob) * 0.02, bobY = Math.abs(Math.cos(player.bob)) * 0.03;
-  camera.position.set(player.pos.x + (player.onGround ? bobX : 0), player.pos.y + camY + (player.onGround ? bobY * 0.5 : 0), player.pos.z);
+  // physics runs at a fixed 120 Hz, so draw the player between the last two steps
+  const al = clamp(phys / STEP, 0, 1);
+  const ix = player.prev.x + (player.pos.x - player.prev.x) * al, iy = player.prev.y + (player.pos.y - player.prev.y) * al, iz = player.prev.z + (player.pos.z - player.prev.z) * al;
+  landDip *= Math.pow(0.003, dt);
+  camera.position.set(ix + (player.onGround ? bobX : 0), iy + camY - landDip + (player.onGround ? bobY * 0.5 : 0), iz);
+  const rk = Math.pow(0.08, dt);
+  player.recoilP *= rk; player.recoilY *= rk;
+  sway.x *= Math.pow(0.0005, dt); sway.y *= Math.pow(0.0005, dt);
   player.recoilKick *= Math.pow(0.001, dt);
-  camera.rotation.set(player.pitch, player.yaw, player.alive ? Math.sin(player.bob * 0.5) * 0.002 : 0.6);
+  camera.rotation.set(player.pitch + player.recoilP, player.yaw + player.recoilY, player.alive ? Math.sin(player.bob * 0.5) * 0.002 : 0.6);
   shake *= Math.pow(0.002, dt);
   if (shake > 0.002) {
     camera.position.x += (Math.random() - 0.5) * shake * 0.08;
@@ -1436,7 +1474,8 @@ function updateCamera(dt) {
   const swing = player.swingT > 0 ? Math.sin((1 - player.swingT / 0.28) * Math.PI) : 0;
   gunGroup.position.x -= swing * 0.25; gunGroup.position.z -= swing * 0.15;
   gunGroup.rotation.z = -swing * 1.2;
-  gunGroup.rotation.x = player.recoilKick * 2 - swing * 0.7 + (player.reloading > 0 ? -0.8 * Math.sin((1 - player.reloading / w.reload) * Math.PI) : 0);
+  gunGroup.rotation.y = sway.x;
+  gunGroup.rotation.x = sway.y + player.recoilKick * 2 - swing * 0.7 + (player.reloading > 0 ? -0.8 * Math.sin((1 - player.reloading / w.reload) * Math.PI) : 0);
   gunGroup.visible = player.alive && !(scoped && fovCur < 30);
   $("scope").style.display = scoped && fovCur < 30 ? "block" : "none";
   $("crosshair").style.display = player.ads ? "none" : "block";
@@ -1444,13 +1483,22 @@ function updateCamera(dt) {
 
 // ---------------------------------------------------------------- main loop
 const clock = new THREE.Clock();
-let hudT = 0;
+let hudT = 0, fpsFrames = 0, fpsT0 = performance.now();
+const STEP = 1 / 120;
+let phys = 0;
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
   if (playing) {
     gameTime += dt;
-    updatePlayer(dt);
+    applyLook();
+    phys += dt;
+    for (let i = 0; i < 8 && phys >= STEP; i++) { player.prev.copy(player.pos); updatePlayer(STEP); phys -= STEP; }
+    if (phys > STEP) phys = 0;
+    $("dashfill").style.width = (100 - player.dashCd / 2.5 * 100) + "%";
+    fpsFrames++;
+    const nowMs = performance.now();
+    if (nowMs - fpsT0 > 500) { $("fps").textContent = Math.round(fpsFrames * 1000 / (nowMs - fpsT0)) + " FPS"; fpsFrames = 0; fpsT0 = nowMs; }
     updateBots(dt);
     updateRemotes(dt);
     netTick(dt);
