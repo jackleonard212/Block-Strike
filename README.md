@@ -98,5 +98,5 @@ Your coins and loadout are saved in your browser. Other players see the weapon y
 
 ## Controls
 
-WASD move, Shift sprint, Space jump (hold to bunny-hop), C/Ctrl crouch (sprint + crouch = slide),
-Mouse1 shoot, Mouse2 scope (sniper and marksman), R reload, 1/2/3 or wheel switch weapon, 4 or V knife, Tab scoreboard, Shift walk.
+WASD move, Shift walk, Space jump, C/Ctrl crouch,
+Mouse1 shoot, Mouse2 scope (sniper and marksman), R reload, 1/2/3 or wheel switch weapon, 4 or V knife, Tab scoreboard, E plant or defuse.
