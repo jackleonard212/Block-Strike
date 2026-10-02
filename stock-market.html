@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake Street — Stock & Crypto Game</title>
+<style>
+  :root{--bg:#0b0f17;--panel:#131a26;--panel2:#1a2333;--line:#26324a;--text:#e6ecf5;--dim:#8a97ad;--up:#25d07f;--down:#ff5470;--accent:#5b9dff;--gold:#ffc857}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  header h1{font-size:18px;margin:0;margin-right:auto}
+  .stat small{display:block;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .stat b{font-size:17px;font-variant-numeric:tabular-nums}
+  .up{color:var(--up)}.down{color:var(--down)}
+  main{display:grid;grid-template-columns:300px 1fr 300px;gap:12px;padding:12px;max-width:1500px;margin:auto}
+  @media(max-width:1000px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .card h2{margin:0;padding:10px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;cursor:pointer;border-bottom:1px solid #1c2638}
+  .row:hover{background:var(--panel2)}
+  .row.sel{background:#1e2b44;box-shadow:inset 3px 0 var(--accent)}
+  .row .sym{font-weight:700}.row .nm{color:var(--dim);font-size:11px}
+  .row .px{text-align:right;font-variant-numeric:tabular-nums}
+  .tag{font-size:10px;padding:1px 5px;border-radius:4px;background:#2a3550;color:var(--dim);margin-left:6px}
+  .tag.c{background:#3a2e12;color:var(--gold)}
+  canvas{width:100%;height:280px;display:block;background:#0e1420}
+  .ctl{padding:14px;display:grid;gap:10px}
+  .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+  .amt{display:flex;gap:6px}
+  input[type=number]{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:15px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:6px;padding:9px 12px;color:#fff;font-weight:600;background:var(--panel2);border:1px solid var(--line)}
+  button:hover{filter:brightness(1.2)}
+  button.buy{background:#178a56;border-color:#17a566}
+  button.sell{background:#b8334c;border-color:#d84560}
+  button.sm{padding:5px 9px;font-size:12px}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .quick{display:flex;gap:6px;flex-wrap:wrap}
+  .kv{display:flex;justify-content:space-between;color:var(--dim)}
+  .kv span:last-child{color:var(--text);font-variant-numeric:tabular-nums}
+  #news{max-height:260px;overflow:auto}
+  .n{padding:8px 14px;border-bottom:1px solid #1c2638;font-size:13px}
+  .n.good{border-left:3px solid var(--up)}.n.bad{border-left:3px solid var(--down)}.n.meh{border-left:3px solid var(--dim)}
+  .n time{color:var(--dim);font-size:11px;display:block}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:7px 14px;text-align:right;font-size:13px}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--dim);font-weight:500;font-size:11px;text-transform:uppercase}
+  tr+tr td{border-top:1px solid #1c2638}
+  .empty{padding:16px;color:var(--dim);text-align:center}
+  .tools{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+  .tools .sp{margin-left:auto;color:var(--dim);font-size:12px}
+  #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+  #toast.show{opacity:1}
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;max-width:420px}
+  dialog::backdrop{background:#000a}
+  .win{color:var(--gold)}
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 Fake Street <span style="color:var(--dim);font-weight:400;font-size:12px">— play money, real thrills</span></h1>
+  <div class="stat"><small>Net worth</small><b id="nw">$0</b></div>
+  <div class="stat"><small>Cash</small><b id="cash">$0</b></div>
+  <div class="stat"><small>Total P/L</small><b id="pl">$0</b></div>
+  <div class="stat"><small>Day</small><b id="day">1</b></div>
+  <div class="stat"><small>Goal $1,000,000</small><b id="goal">0%</b></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Market <span id="mood"></span></h2>
+    <div id="list"></div>
+  </section>
+
+  <section style="display:grid;gap:12px;align-content:start">
+    <div class="card">
+      <h2><span id="chTitle">—</span><span id="chRange"></span></h2>
+      <canvas id="chart"></canvas>
+      <div class="ctl">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div class="big" id="px">$0</div><div id="chg"></div>
+        </div>
+        <div class="kv"><span>You own</span><span id="own">0</span></div>
+        <div class="kv"><span>Position value / P&L</span><span id="posv">—</span></div>
+        <div class="amt"><input id="qty" type="number" min="0" step="any" value="1" aria-label="Quantity"></div>
+        <div class="quick" id="quick"></div>
+        <div class="btns"><button class="buy" id="buy">BUY</button><button class="sell" id="sell">SELL</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Portfolio</h2>
+      <div id="port"></div>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:12px;align-content:start">
+    <div class="card">
+      <h2>Breaking news</h2>
+      <div id="news"></div>
+    </div>
+    <div class="card">
+      <h2>Game</h2>
+      <div class="tools">
+        <button class="sm" id="pause">⏸ Pause</button>
+        <button class="sm" id="speed">Speed 1×</button>
+        <button class="sm" id="reset">Reset</button>
+        <span class="sp">Fee 0.1% per trade</span>
+      </div>
+      <div class="n meh" style="border-left:0;color:var(--dim)">Prices are 100% simulated. Crypto swings wildly; stocks are calmer. News moves prices — buy the rumor, sell the news. Reach $1,000,000 to win. Progress auto-saves.</div>
+    </div>
+  </section>
+</main>
+
+<dialog id="winDlg"><h2 class="win">🏆 You hit $1,000,000!</h2><p>You're a (fake) millionaire on day <span id="winDay"></span>. Keep playing or start over.</p><form method="dialog"><button>Keep playing</button></form></dialog>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const START = 10000, GOAL = 1e6, FEE = 0.001, HIST = 240, SAVE = 'fakestreet.v1';
+  // vol = per-tick volatility, drift = per-tick drift. Ticks are ~1 second each; 30 ticks = 1 day.
+  const ASSETS = [
+    {s:'BLCK', n:'Blockworks Inc',   t:'stock', p:120,   vol:.008},
+    {s:'MOON', n:'MoonSnack Foods',  t:'stock', p:48,    vol:.011},
+    {s:'NVLT', n:'Novolt Energy',    t:'stock', p:210,   vol:.010},
+    {s:'FRGE', n:'Forge AI',         t:'stock', p:340,   vol:.014},
+    {s:'TOYZ', n:'ToyZilla Corp',    t:'stock', p:27,    vol:.016},
+    {s:'BTCX', n:'BitCoinX',         t:'crypto', p:64000, vol:.018},
+    {s:'ETHR', n:'Etherion',         t:'crypto', p:3200,  vol:.022},
+    {s:'DOGO', n:'DogeOne',          t:'crypto', p:.18,   vol:.035},
+    {s:'PEPX', n:'PepeX',            t:'crypto', p:.0042, vol:.05},
+    {s:'SOLR', n:'SolarChain',       t:'crypto', p:145,   vol:.03},
+  ];
+  const NEWS = [
+    ['{n} announces record quarterly earnings', .06, 'good', 's'],
+    ['{n} CEO resigns amid scandal', -.09, 'bad', 's'],
+    ['{n} unveils surprise new product', .07, 'good', 's'],
+    ['Regulators open probe into {n}', -.08, 'bad', 'a'],
+    ['Celebrity tweets about {n}', .12, 'good', 'c'],
+    ['{n} suffers major hack', -.15, 'bad', 'c'],
+    ['Whale wallet dumps {n}', -.10, 'bad', 'c'],
+    ['Big exchange lists {n}', .13, 'good', 'c'],
+    ['{n} partnership rumors swirl', .05, 'good', 'a'],
+    ['Analyst downgrades {n}', -.05, 'bad', 's'],
+  ];
+  const MARKET_NEWS = [
+    ['Central bank cuts rates — risk assets rally', .03, 'good'],
+    ['Inflation spikes — markets sell off', -.035, 'bad'],
+    ['Global crypto ban rumor shakes traders', -.07, 'bad', 'crypto'],
+    ['Institutional money pours into crypto', .06, 'good', 'crypto'],
+    ['Tech earnings beat expectations', .04, 'good', 'stock'],
+    ['Recession fears grow', -.04, 'bad', 'stock'],
+  ];
+
+  const $ = id => document.getElementById(id);
+  const money = (v, d) => {
+    const a = Math.abs(v), dec = d ?? (a >= 100 ? 2 : a >= 1 ? 3 : a >= .1 ? 4 : 6);
+    return (v < 0 ? '-' : '') + '$' + a.toLocaleString(undefined, {minimumFractionDigits: dec, maximumFractionDigits: dec});
+  };
+  const m0 = v => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, {maximumFractionDigits: 0});
+  const pct = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
+  const qfmt = v => v >= 100 ? v.toLocaleString(undefined, {maximumFractionDigits: 2}) : +v.toFixed(6) + '';
+  const rnd = () => Math.random(), pick = a => a[Math.floor(rnd() * a.length)];
+  const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+  let st, sel = 0, paused = false, speed = 1, tick = 0, timer, bull = 0, wonShown = false;
+
+  function fresh() {
+    return {
+      cash: START, tick: 0, hold: {}, cost: {}, news: [],
+      px: ASSETS.map(a => a.p), hist: ASSETS.map(a => Array(HIST).fill(a.p)),
+      open: ASSETS.map(a => a.p), won: false,
+    };
+  }
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.px && s.px.length === ASSETS.length) return s; } catch (e) {}
+    return fresh();
+  }
+  function save() { try { localStorage.setItem(SAVE, JSON.stringify(st)); } catch (e) {} }
+
+  const dayOf = () => Math.floor(st.tick / 30) + 1;
+  const holdVal = () => ASSETS.reduce((t, a, i) => t + (st.hold[a.s] || 0) * st.px[i], 0);
+  const netWorth = () => st.cash + holdVal();
+
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+  function addNews(text, kind) {
+    st.news.unshift({text, kind, day: dayOf()});
+    st.news.length = Math.min(st.news.length, 30);
+    renderNews();
+  }
+
+  function step() {
+    st.tick++;
+    // global market mood: a slow-moving random regime
+    bull += (gauss() * .0006 - bull * .02);
+    ASSETS.forEach((a, i) => {
+      const crypto = a.t === 'crypto';
+      const mkt = bull * (crypto ? 1.6 : 1);
+      let r = gauss() * a.vol + mkt;
+      if (crypto && rnd() < .004) r += gauss() * a.vol * 5; // random crypto spike
+      st.px[i] = Math.max(a.p * 1e-4, st.px[i] * Math.exp(r));
+      const h = st.hist[i]; h.push(st.px[i]); if (h.length > HIST) h.shift();
+    });
+    if (st.tick % 30 === 0) ASSETS.forEach((a, i) => st.open[i] = st.px[i]);
+    if (rnd() < .035) fireNews();
+    if (!st.won && netWorth() >= GOAL) { st.won = true; $('winDay').textContent = dayOf(); $('winDlg').showModal(); }
+    if (st.tick % 10 === 0) save();
+    render();
+  }
+
+  function fireNews() {
+    if (rnd() < .2) {
+      const [t, m, k, only] = pick(MARKET_NEWS);
+      ASSETS.forEach((a, i) => { if (!only || a.t === only) st.px[i] *= 1 + m * (.7 + rnd() * .6); });
+      addNews('🌐 ' + t, k); return;
+    }
+    const [tpl, m, k, who] = pick(NEWS);
+    const pool = ASSETS.map((a, i) => i).filter(i => who === 'a' || (who === 's' ? ASSETS[i].t === 'stock' : ASSETS[i].t === 'crypto'));
+    const i = pick(pool), a = ASSETS[i];
+    st.px[i] *= 1 + m * (.7 + rnd() * .6);
+    addNews((a.t === 'crypto' ? '🪙 ' : '🏢 ') + tpl.replace('{n}', a.n + ' (' + a.s + ')'), k);
+  }
+
+  // ---------- trading ----------
+  function trade(side) {
+    const a = ASSETS[sel], p = st.px[sel];
+    let q = parseFloat($('qty').value);
+    if (!(q > 0)) return toast('Enter a quantity');
+    const owned = st.hold[a.s] || 0;
+    if (side === 'buy') {
+      const maxQ = st.cash / (p * (1 + FEE));
+      if (q > maxQ + 1e-9) { if (maxQ * p < 0.01) return toast('Not enough cash'); q = maxQ; toast('Buying max you can afford'); }
+      const cost = q * p * (1 + FEE);
+      st.cash -= cost;
+      st.cost[a.s] = (st.cost[a.s] || 0) + cost;
+      st.hold[a.s] = owned + q;
+      toast(`Bought ${qfmt(q)} ${a.s} @ ${money(p)}`);
+    } else {
+      if (owned <= 0) return toast(`You don't own any ${a.s}`);
+      if (q > owned) q = owned;
+      const avg = (st.cost[a.s] || 0) / owned;
+      const proceeds = q * p * (1 - FEE);
+      st.cash += proceeds;
+      st.cost[a.s] = Math.max(0, (st.cost[a.s] || 0) - avg * q);
+      st.hold[a.s] = owned - q;
+      if (st.hold[a.s] < 1e-9) { delete st.hold[a.s]; delete st.cost[a.s]; }
+      toast(`Sold ${qfmt(q)} ${a.s} @ ${money(p)} (${proceeds - avg * q >= 0 ? '+' : ''}${m0(proceeds - avg * q)})`);
+    }
+    render(); save();
+  }
+  function setQtyPct(f) {
+    const a = ASSETS[sel], p = st.px[sel], owned = st.hold[a.s] || 0;
+    // Shift-free convention: % buttons size a BUY by cash; "Sell all" handled separately.
+    const q = (st.cash * f) / (p * (1 + FEE));
+    $('qty').value = +q.toFixed(p < 1 ? 0 : 4);
+  }
+
+  // ---------- rendering ----------
+  function renderList() {
+    $('list').innerHTML = ASSETS.map((a, i) => {
+      const c = st.px[i] / st.open[i] - 1;
+      return `<div class="row ${i === sel ? 'sel' : ''}" data-i="${i}">
+        <div><span class="sym">${a.s}</span><span class="tag ${a.t === 'crypto' ? 'c' : ''}">${a.t}</span><div class="nm">${a.n}</div></div>
+        <div class="px">${money(st.px[i])}<div class="${c >= 0 ? 'up' : 'down'}">${pct(c)}</div></div></div>`;
+    }).join('');
+  }
+  function renderPort() {
+    const rows = ASSETS.map((a, i) => ({a, i, q: st.hold[a.s] || 0})).filter(r => r.q > 0);
+    if (!rows.length) { $('port').innerHTML = '<div class="empty">No positions yet. Pick an asset and hit BUY.</div>'; return; }
+    $('port').innerHTML = '<table><tr><th>Asset</th><th>Qty</th><th>Value</th><th>P/L</th></tr>' + rows.map(r => {
+      const v = r.q * st.px[r.i], pl = v - (st.cost[r.a.s] || 0);
+      return `<tr style="cursor:pointer" data-i="${r.i}"><td>${r.a.s}</td><td>${qfmt(r.q)}</td><td>${m0(v)}</td><td class="${pl >= 0 ? 'up' : 'down'}">${pl >= 0 ? '+' : ''}${m0(pl)}</td></tr>`;
+    }).join('') + '</table>';
+  }
+  function renderNews() {
+    $('news').innerHTML = st.news.length ? st.news.map(n => `<div class="n ${n.kind}"><time>Day ${n.day}</time>${n.text}</div>`).join('') : '<div class="empty">Quiet so far…</div>';
+  }
+  function renderHeader() {
+    const nw = netWorth(), pl = nw - START;
+    $('nw').textContent = m0(nw); $('cash').textContent = m0(st.cash);
+    $('pl').textContent = (pl >= 0 ? '+' : '') + m0(pl); $('pl').className = pl >= 0 ? 'up' : 'down';
+    $('day').textContent = dayOf();
+    $('goal').textContent = Math.min(100, nw / GOAL * 100).toFixed(1) + '%';
+    $('mood').textContent = bull > .0004 ? '🐂 bullish' : bull < -.0004 ? '🐻 bearish' : '😐 mixed';
+  }
+  function renderSel() {
+    const a = ASSETS[sel], p = st.px[sel], c = p / st.open[sel] - 1, q = st.hold[a.s] || 0;
+    $('chTitle').textContent = `${a.s} — ${a.n}`;
+    $('px').textContent = money(p);
+    $('chg').textContent = pct(c) + ' today'; $('chg').className = c >= 0 ? 'up' : 'down';
+    $('own').textContent = qfmt(q) + ' ' + a.s;
+    const pl = q * p - (st.cost[a.s] || 0);
+    $('posv').innerHTML = q ? `${m0(q * p)} / <span class="${pl >= 0 ? 'up' : 'down'}">${pl >= 0 ? '+' : ''}${m0(pl)}</span>` : '—';
+    const h = st.hist[sel];
+    $('chRange').textContent = `lo ${money(Math.min(...h))} · hi ${money(Math.max(...h))}`;
+  }
+  function drawChart() {
+    const cv = $('chart'), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const d = st.hist[sel], lo = Math.min(...d), hi = Math.max(...d), pad = (hi - lo) * .1 || hi * .01;
+    const y = v => h - 24 - (v - lo + pad) / (hi - lo + 2 * pad) * (h - 40), x = i => i / (d.length - 1) * (w - 70) + 6;
+    g.strokeStyle = '#1c2638'; g.fillStyle = '#6b7890'; g.font = '11px system-ui'; g.lineWidth = 1;
+    for (let k = 0; k < 5; k++) {
+      const v = lo - pad + (hi - lo + 2 * pad) * k / 4, yy = y(v);
+      g.beginPath(); g.moveTo(0, yy); g.lineTo(w - 64, yy); g.stroke(); g.fillText(money(v), w - 62, yy + 4);
+    }
+    const up = d[d.length - 1] >= d[0], col = up ? '#25d07f' : '#ff5470';
+    g.beginPath(); d.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)));
+    g.strokeStyle = col; g.lineWidth = 2; g.stroke();
+    g.lineTo(x(d.length - 1), h - 24); g.lineTo(x(0), h - 24); g.closePath();
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, col + '44'); gr.addColorStop(1, col + '00');
+    g.fillStyle = gr; g.fill();
+    const own = ASSETS[sel].s, q = st.hold[own];
+    if (q) { // average entry line
+      const avg = st.cost[own] / q, yy = y(avg);
+      if (yy > 0 && yy < h - 24) { g.setLineDash([5, 4]); g.strokeStyle = '#ffc857'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, yy); g.lineTo(w - 64, yy); g.stroke(); g.setLineDash([]); g.fillStyle = '#ffc857'; g.fillText('avg', 4, yy - 3); }
+    }
+  }
+  function render() { renderHeader(); renderList(); renderSel(); renderPort(); drawChart(); }
+
+  // ---------- wiring ----------
+  function schedule() { clearInterval(timer); if (!paused) timer = setInterval(step, 1000 / speed); }
+  $('list').onclick = e => { const r = e.target.closest('.row'); if (r) { sel = +r.dataset.i; render(); } };
+  $('port').onclick = e => { const r = e.target.closest('tr[data-i]'); if (r) { sel = +r.dataset.i; render(); } };
+  $('buy').onclick = () => trade('buy');
+  $('sell').onclick = () => trade('sell');
+  $('quick').innerHTML = [['25%', .25], ['50%', .5], ['Max buy', 1]].map(([l, f]) => `<button class="sm" data-f="${f}">${l}</button>`).join('') + '<button class="sm" data-all="1">Sell all</button>';
+  $('quick').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.all) { const q = st.hold[ASSETS[sel].s] || 0; if (!q) return toast('Nothing to sell'); $('qty').value = q; trade('sell'); }
+    else setQtyPct(+b.dataset.f);
+  };
+  $('pause').onclick = () => { paused = !paused; $('pause').textContent = paused ? '▶ Resume' : '⏸ Pause'; schedule(); };
+  $('speed').onclick = () => { speed = speed === 1 ? 3 : speed === 3 ? 8 : 1; $('speed').textContent = `Speed ${speed}×`; schedule(); };
+  $('reset').onclick = () => { if (confirm('Reset everything and start over with $10,000?')) { st = fresh(); bull = 0; save(); renderNews(); render(); } };
+  addEventListener('resize', drawChart);
+  addEventListener('beforeunload', save);
+
+  st = load(); renderNews(); render(); schedule();
+})();
+</script>
+</body>
+</html>
