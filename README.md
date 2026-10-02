@@ -56,6 +56,13 @@ To show some servers to everyone who opens the page, list them in `servers.json`
 [{ "name": "Alpha", "addr": "wss://alpha.example.com" }]
 ```
 
+## Gunplay (CS2 style)
+
+- **Stand still to hit.** Your bullets land inside a cone shown by the crosshair. It is tightest when standing, tighter still crouched, wider when you walk (Shift) or run, and widest in the air. Stopping dead before you shoot is the whole game. Each bullet in a spray also adds a little inaccuracy.
+- **Spray patterns.** Every automatic weapon kicks along a fixed pattern. The assault rifle climbs straight up for about ten bullets, then swings left, right, left and right. Pull your mouse down against it to keep bullets on target. The pattern resets about two seconds after you stop shooting.
+- **No aiming down sights.** Right click only scopes the sniper and marksman (two zoom levels, then off). Scoped is accurate when still, unscoped or moving is wildly inaccurate. Sights from the armory are cosmetic.
+- **Damage.** Headshots do 4x, legs 0.75x, and damage drops with distance. The rifle kills with one headshot or four body shots. Shift walks quietly, there is no sprint, slide or dash, and heavier guns slow you down. Reloads take CS-length time.
+
 ## Bomb defusal (5v5)
 
 Pick **Bomb defusal · 5v5** under Solo, choose your side, and play. You and 4 bots face 5 bots, with two bomb sites on the map, **A** (east) and **B** (west).
@@ -81,15 +88,15 @@ Your coins and loadout are saved in your browser. Other players see the weapon y
 
 ## Features
 
-- Dust II-style map: T spawn in the south, CT spawn in the north, long A, short A, mid doors, B tunnels and two bomb-site style areas. Bots path around walls.
+- A big Dust-style map: T spawn in the south, CT spawn in the north, long A, short A, mid doors, B tunnels and two bomb sites in the middle, with a ring street around it. Out there are real buildings you can walk into: a two-floor palace and apartments, a market and garage, big CT and T bases, corner shacks and ruins. They have doors, windows, stairs and roofs. Bots path through the doors.
 - Smooth aiming: raw mouse input, recoil that recovers, fixed 120 Hz movement, FOV slider and an FPS counter.
 - Minimap (top left) that rotates with you. Enemies show up on it while they can see you or just fired.
 - Live leaderboard under the minimap, Tab for the full scoreboard. Solo is first to 25 kills, then the match resets.
 - Kill streaks, multi-kill banners, floating damage numbers, screen shake.
 - Knife (key 4, or V to quick-switch): left click to slash, hit someone from behind for a backstab.
-- Dash (Q), cyan jump pads, and health and ammo pickups (solo).
+- Cyan jump pads, and health and ammo pickups (solo).
 
 ## Controls
 
 WASD move, Shift sprint, Space jump (hold to bunny-hop), C/Ctrl crouch (sprint + crouch = slide),
-Mouse1 shoot, Mouse2 aim, R reload, 1/2/3 or wheel switch weapon, Q dash, 4 or V knife, Tab scoreboard.
+Mouse1 shoot, Mouse2 scope (sniper and marksman), R reload, 1/2/3 or wheel switch weapon, 4 or V knife, Tab scoreboard, Shift walk.

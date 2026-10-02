@@ -159,7 +159,7 @@
   #actionFill{display:block;height:100%;width:0;background:#ffd23c}
   #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
   #fps{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:11px;font-weight:700;opacity:.55;text-shadow:0 1px 2px #000}
-  #dash{margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
+  #dash{display:none;margin-top:6px;font-size:11px;letter-spacing:2px;opacity:.9}
   #dashbar{width:260px;height:6px;background:rgba(0,0,0,.5);margin-top:3px}
   #dashfill{display:block;height:100%;width:100%;background:#38bdf8}
   #board{position:absolute;left:50%;top:18%;transform:translateX(-50%);display:none;min-width:340px;background:rgba(0,0,0,.6);padding:12px 18px;border-radius:6px;font-size:16px}
@@ -297,12 +297,12 @@
       <div class="card">
         <div class="h2">Controls</div>
         <table class="keys">
-          <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Sprint</td></tr>
-          <tr><td>Space</td><td>Jump (hold to bunny-hop)</td><td>C / Ctrl</td><td>Crouch / slide</td></tr>
-          <tr><td>Mouse 1</td><td>Shoot</td><td>Mouse 2</td><td>Aim down sights</td></tr>
+          <tr><td>WASD</td><td>Move</td><td>Shift</td><td>Walk (quiet and accurate)</td></tr>
+          <tr><td>Space</td><td>Jump</td><td>C / Ctrl</td><td>Crouch (most accurate)</td></tr>
+          <tr><td>Mouse 1</td><td>Shoot (stand still to hit)</td><td>Mouse 2</td><td>Scope (sniper and marksman)</td></tr>
           <tr><td>R</td><td>Reload</td><td>1 / 2 / 3 / Wheel</td><td>Switch weapon</td></tr>
           <tr><td>Tab</td><td>Scoreboard</td><td>Esc</td><td>Pause / leave match</td></tr>
-          <tr><td>Q</td><td>Dash</td><td>4 / V</td><td>Knife (backstab = big damage)</td></tr>
+          <tr><td>4 / V</td><td>Knife (backstab = big damage)</td><td></td><td></td></tr>
           <tr><td>E (hold)</td><td>Plant or defuse the bomb</td><td></td><td></td></tr>
           <tr><td>Cyan pads</td><td>Launch you sky-high</td><td>Pickups</td><td>Green HP, yellow ammo (solo)</td></tr>
         </table>
@@ -386,7 +386,7 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const SKY = 0x8fd3ff;
 scene.background = new THREE.Color(SKY);
-scene.fog = new THREE.Fog(SKY, 40, 140);
+scene.fog = new THREE.Fog(SKY, 60, 190);
 
 const camera = new THREE.PerspectiveCamera(80, innerWidth / innerHeight, 0.02, 300);
 camera.rotation.order = "YXZ";
@@ -400,7 +400,7 @@ const sun = new THREE.DirectionalLight(0xffffff, 0.9);
 sun.position.set(40, 70, 25);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 1, far: 200 });
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 300 });
 scene.add(sun);
 
 // gradient sky dome that follows the camera, a sun disc and drifting block clouds
@@ -437,33 +437,64 @@ addEventListener("resize", () => {
 });
 
 // ---------------------------------------------------------------- map
-const ARENA = 60;                // half-size
+const ARENA = 84;                // half-size
 const boxes = [];                // collision AABBs {min:Vector3,max:Vector3}
 const wallMeshes = [];           // meshes for raycasting
 const spawnPoints = [];
 
-function addBox(x, y, z, w, h, d, color, opts = {}) {
-  // x,z = center; y = bottom
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshLambertMaterial({ color })
-  );
-  mesh.position.set(x, y + h / 2, z);
-  mesh.castShadow = !opts.noShadow; mesh.receiveShadow = true;
-  scene.add(mesh);
-  // edge lines for the blocky Krunker look
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(mesh.geometry),
-    new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 })
-  );
-  mesh.add(edges);
-  mesh.updateMatrixWorld();
-  wallMeshes.push(mesh);
+const staticBoxes = [];
+// x,z = centre; y = bottom. Boxes are collected and merged into a single mesh by buildStaticMesh(), which keeps the draw calls low
+function addBox(x, y, z, w, h, d, color) {
+  staticBoxes.push([x, y, z, w, h, d, color]);
   boxes.push({
     min: new THREE.Vector3(x - w / 2, y, z - d / 2),
     max: new THREE.Vector3(x + w / 2, y + h, z + d / 2),
   });
-  return mesh;
+}
+function buildStaticMesh() {
+  const n = staticBoxes.length;
+  const pos = new Float32Array(n * 72), nor = new Float32Array(n * 72), col = new Float32Array(n * 72), idx = new Uint32Array(n * 36), lines = new Float32Array(n * 72);
+  const FACES = [
+    [[1, 0, 0], [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]]], [[-1, 0, 0], [[-1, -1, 1], [-1, 1, 1], [-1, 1, -1], [-1, -1, -1]]],
+    [[0, 1, 0], [[-1, 1, -1], [-1, 1, 1], [1, 1, 1], [1, 1, -1]]], [[0, -1, 0], [[-1, -1, 1], [-1, -1, -1], [1, -1, -1], [1, -1, 1]]],
+    [[0, 0, 1], [[1, -1, 1], [1, 1, 1], [-1, 1, 1], [-1, -1, 1]]], [[0, 0, -1], [[-1, -1, -1], [-1, 1, -1], [1, 1, -1], [1, -1, -1]]],
+  ];
+  const CORNERS = []; for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) CORNERS.push([x, y, z]);
+  const c = new THREE.Color();
+  let vi = 0, ii = 0, li = 0;
+  for (const [x, y, z, w, h, d, color] of staticBoxes) {
+    const cx = x, cy = y + h / 2, cz = z, hx = w / 2, hy = h / 2, hz = d / 2;
+    c.setHex(color);
+    for (const [nm, cs] of FACES) {
+      const base = vi / 3;
+      for (const q of cs) {
+        pos[vi] = cx + q[0] * hx; pos[vi + 1] = cy + q[1] * hy; pos[vi + 2] = cz + q[2] * hz;
+        nor[vi] = nm[0]; nor[vi + 1] = nm[1]; nor[vi + 2] = nm[2];
+        col[vi] = c.r; col[vi + 1] = c.g; col[vi + 2] = c.b;
+        vi += 3;
+      }
+      idx[ii++] = base; idx[ii++] = base + 1; idx[ii++] = base + 2; idx[ii++] = base; idx[ii++] = base + 2; idx[ii++] = base + 3;
+    }
+    for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) {   // the 12 edges join corners that differ in exactly one axis
+      const A = CORNERS[i], B = CORNERS[j];
+      if ((A[0] !== B[0]) + (A[1] !== B[1]) + (A[2] !== B[2]) !== 1) continue;
+      lines[li++] = cx + A[0] * hx; lines[li++] = cy + A[1] * hy; lines[li++] = cz + A[2] * hz;
+      lines[li++] = cx + B[0] * hx; lines[li++] = cy + B[1] * hy; lines[li++] = cz + B[2] * hz;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  scene.add(mesh);
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute("position", new THREE.BufferAttribute(lines.subarray(0, li), 3));
+  scene.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })));
+  wallMeshes.push(mesh);
 }
 
 function buildMap() {
@@ -475,7 +506,7 @@ function buildMap() {
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
-  const grid = new THREE.GridHelper(ARENA * 2, 60, 0x6b5a3a, 0x6b5a3a);
+  const grid = new THREE.GridHelper(ARENA * 2, ARENA, 0x6b5a3a, 0x6b5a3a);
   grid.material.opacity = 0.1; grid.material.transparent = true;
   grid.position.y = 0.01;
   scene.add(grid);
@@ -551,13 +582,134 @@ function buildMap() {
     crate(sx * 44, -10, 6, 2, 3, STONE);           // low wall guarding the long A exit
   }
 
-  // spawn points: T courtyard, CT spawn and the two sites
+  // ---- the old arena wall becomes an inner ring wall; gaps lead out to the new streets and buildings
+  const ringWall = (xa, za, xb, zb) => block((xa + xb) / 2, (za + zb) / 2, Math.max(2, Math.abs(xb - xa)), Math.max(2, Math.abs(zb - za)), 10, 0xb39a70);
+  for (const sx of [1, -1]) for (const [za, zb] of [[-62, -44], [-34, 44], [54, 62]]) ringWall(sx * 61, za, sx * 61, zb);   // east and west, gaps at z -44..-34 and 44..54
+  for (const sz of [1, -1]) for (const [xa, xb] of [[-62, -20], [-8, 8], [20, 62]]) ringWall(xa, sz * 61, xb, sz * 61);       // north and south, gaps at x -20..-8 and 8..20
+
+  // ---- real buildings: walls with doors and windows, a roof, and stairs up to a second floor
+  const TH = 0.6, FH = 3.4, SL = 0.4;   // wall thickness, storey height, slab thickness
+  const wallOps = (ax, az, bx, bz, y0, h, ops, color) => {
+    const alongX = az === bz, L = alongX ? Math.abs(bx - ax) : Math.abs(bz - az);
+    const place = (s0, e0, yb, hh) => {
+      if (e0 - s0 < 0.01 || hh <= 0.01) return;
+      if (alongX) addBox(Math.min(ax, bx) + (s0 + e0) / 2, yb, az, e0 - s0, hh, TH, color);
+      else addBox(ax, yb, Math.min(az, bz) + (s0 + e0) / 2, TH, hh, e0 - s0, color);
+    };
+    let cur = 0;
+    for (const op of ops) {
+      const left = op.at - op.w / 2, right = op.at + op.w / 2;
+      const sill = op.kind === "door" ? 0 : (op.sill === undefined ? 1.0 : op.sill), top = op.top || (op.kind === "door" ? 2.6 : 2.5);
+      place(cur, left, y0, h);
+      if (sill > 0) place(left, right, y0, sill);          // under a window
+      place(left, right, y0 + top, h - top);               // lintel over the opening
+      cur = right;
+    }
+    place(cur, L, y0, h);
+  };
+  const house = o => {
+    const { x0, z0, x1, z1 } = o, floors = o.floors || 1, col = o.color || 0xe0d2b4, roofCol = o.roof || 0x7a6a55, trim = 0x6e5b44, floorCol = 0xa89878;
+    const SIDES = { N: [x0, z0, x1, z0], S: [x0, z1, x1, z1], W: [x0, z0, x0, z1], E: [x1, z0, x1, z1] };
+    const slab = (xa, za, xb, zb) => addBox((xa + xb) / 2, FH, (za + zb) / 2, xb - xa, SL, zb - za, floorCol);
+    for (let f = 0; f < floors; f++) {
+      const y0 = f * (FH + SL);
+      for (const side in SIDES) {
+        const ops = (o.open || []).filter(op => op.s === side && (op.f === undefined ? (op.kind === "door" ? f === 0 : true) : op.f === f)).sort((a2, b2) => a2.at - b2.at);
+        wallOps(SIDES[side][0], SIDES[side][1], SIDES[side][2], SIDES[side][3], y0, FH, ops, col);
+      }
+      for (const pt of (o.part || [])) if (pt.f === undefined || pt.f === f) {   // inner wall with a doorway
+        if (pt.axis === "x") wallOps(pt.at, z0, pt.at, z1, y0, FH, [{ at: pt.door - z0, w: pt.w || 2.2, kind: "door" }], col);
+        else wallOps(x0, pt.at, x1, pt.at, y0, FH, [{ at: pt.door - x0, w: pt.w || 2.2, kind: "door" }], col);
+      }
+    }
+    if (floors > 1) {   // second floor with a stairwell in one south corner
+      if (o.stairs) {
+        const east = o.stairs === "SE", hx0 = east ? x1 - 2.7 : x0 + 0.3, hx1 = east ? x1 - 0.3 : x0 + 2.7, hz = z1 - 10.2;   // 3 units of landing, then nine 0.8 deep steps
+        if (east) { slab(x0, z0, hx0, z1); slab(hx0, z0, x1, hz); } else { slab(hx1, z0, x1, z1); slab(x0, z0, hx1, hz); }
+        for (let k = 0; k < 9; k++) addBox((hx0 + hx1) / 2, 0, z1 - 3.0 - k * 0.8 - 0.4, hx1 - hx0, (k + 1) * 0.4, 0.8, 0xb9a98a);   // 0.4 high steps
+      } else slab(x0, z0, x1, z1);
+    }
+    const roofY = floors * FH + (floors - 1) * SL;
+    addBox((x0 + x1) / 2, roofY, (z0 + z1) / 2, x1 - x0 + 1.2, SL, z1 - z0 + 1.2, roofCol);       // roof with a small overhang
+    for (const [cx, cz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) addBox(cx, 0, cz, 0.8, roofY, 0.8, trim);   // corner pillars
+    for (const pr of (o.props || [])) addBox(pr[0], 0, pr[1], pr[2], pr[4], pr[3], pr[5] || WOOD);
+  };
+  const awning = (x, z, w, d, color) => addBox(x, 2.75, z, w, 0.15, d, color);
+
+  // Palace (east, next to A site): two floors, doors on the west and south, windows all round
+  house({ x0: 66, z0: -46, x1: 82, z1: -22, floors: 2, stairs: "SE", color: 0xe6d9ba, open: [
+    { s: "W", at: 7, w: 2.4, kind: "door" }, { s: "W", at: 17, w: 2.4, kind: "win" }, { s: "W", at: 7, w: 2.4, kind: "win", f: 1 }, { s: "W", at: 17, w: 2.4, kind: "win", f: 1 },
+    { s: "N", at: 4, w: 2.2, kind: "win" }, { s: "N", at: 12, w: 2.2, kind: "win" }, { s: "E", at: 6, w: 2.2, kind: "win" }, { s: "E", at: 13, w: 2.2, kind: "win" },
+    { s: "S", at: 4, w: 2.4, kind: "door" }, { s: "S", at: 4, w: 2.2, kind: "win", f: 1 }, { s: "S", at: 10, w: 2.2, kind: "win", f: 1 },
+  ], part: [{ axis: "x", at: 74, f: 0, door: -34 }, { axis: "x", at: 74, f: 1, door: -30 }],
+  props: [[69, -43, 1.2, 1.2, 1.0, WOOD], [71, -26, 1.6, 1.0, 1.0, MIL], [78, -43, 1.4, 1.4, 1.0, WOOD], [77, -36, 2.4, 1.0, 0.9, WOOD]] });
+  awning(64.2, -39, 3.6, 4.8, 0xc0392b);
+
+  // B apartments (west, mirror of the palace)
+  house({ x0: -82, z0: -46, x1: -66, z1: -22, floors: 2, stairs: "SW", color: 0xdcc4a2, open: [
+    { s: "E", at: 7, w: 2.4, kind: "door" }, { s: "E", at: 17, w: 2.4, kind: "win" }, { s: "E", at: 7, w: 2.4, kind: "win", f: 1 }, { s: "E", at: 17, w: 2.4, kind: "win", f: 1 },
+    { s: "N", at: 4, w: 2.2, kind: "win" }, { s: "N", at: 12, w: 2.2, kind: "win" }, { s: "W", at: 6, w: 2.2, kind: "win" }, { s: "W", at: 13, w: 2.2, kind: "win" },
+    { s: "S", at: 12, w: 2.4, kind: "door" }, { s: "S", at: 12, w: 2.2, kind: "win", f: 1 }, { s: "S", at: 6, w: 2.2, kind: "win", f: 1 },
+  ], part: [{ axis: "x", at: -74, f: 0, door: -34 }, { axis: "x", at: -74, f: 1, door: -30 }],
+  props: [[-69, -43, 1.2, 1.2, 1.0, WOOD], [-71, -26, 1.6, 1.0, 1.0, MIL], [-78, -43, 1.4, 1.4, 1.0, WOOD], [-77, -36, 2.4, 1.0, 0.9, WOOD]] });
+  awning(-64.2, -39, 3.6, 4.8, 0x2e6da4);
+
+  // Market (east) and garage (west): one floor each, two rooms
+  house({ x0: 66, z0: 6, x1: 80, z1: 24, color: 0xcdb892, open: [
+    { s: "W", at: 5, w: 2.6, kind: "door" }, { s: "W", at: 13, w: 2.4, kind: "win" }, { s: "N", at: 3, w: 2.4, kind: "door" },
+    { s: "S", at: 4, w: 2.4, kind: "win" }, { s: "S", at: 10, w: 2.4, kind: "win" }, { s: "E", at: 9, w: 2.4, kind: "win" },
+  ], part: [{ axis: "x", at: 73, door: 14 }],
+  props: [[70, 16, 3.0, 1.0, 1.0, WOOD], [76, 10, 1.2, 3.0, 1.0, WOOD], [79.2, 14, 0.8, 5.0, 1.8, WOOD]] });
+  awning(64.2, 11, 3.6, 5.2, 0xd9a02b);
+  house({ x0: -80, z0: 6, x1: -66, z1: 24, color: 0xc9b48e, open: [
+    { s: "E", at: 5, w: 2.6, kind: "door" }, { s: "E", at: 13, w: 2.4, kind: "win" }, { s: "S", at: 7, w: 4.2, kind: "door", top: 3.0 },
+    { s: "N", at: 11, w: 2.4, kind: "win" }, { s: "W", at: 9, w: 2.4, kind: "win" },
+  ], part: [{ axis: "x", at: -73, door: 14 }],
+  props: [[-70, 16, 3.0, 1.0, 1.0, WOOD], [-76, 10, 1.2, 3.0, 1.0, WOOD], [-79.2, 14, 0.8, 5.0, 1.8, WOOD]] });
+  awning(-64.2, 11, 3.6, 5.2, 0x3a8f5c);
+
+  // CT base (north) and T base (south): big two-floor buildings behind each spawn, doors lined up with the gaps in the ring wall
+  const base = (z0, z1, doorSide, winSide, tint) => house({ x0: -20, z0, x1: 20, z1, floors: 2, stairs: "SE", color: tint, open: [
+    { s: doorSide, at: 6, w: 2.6, kind: "door" }, { s: doorSide, at: 34, w: 2.6, kind: "door" },
+    { s: doorSide, at: 14, w: 2.2, kind: "win" }, { s: doorSide, at: 20, w: 2.2, kind: "win" }, { s: doorSide, at: 26, w: 2.2, kind: "win" },
+    { s: doorSide, at: 14, w: 2.2, kind: "win", f: 1 }, { s: doorSide, at: 26, w: 2.2, kind: "win", f: 1 },
+    { s: winSide, at: 10, w: 2.4, kind: "win" }, { s: winSide, at: 30, w: 2.4, kind: "win" }, { s: "W", at: 8, w: 2.4, kind: "win" }, { s: "E", at: 5, w: 2.4, kind: "win", f: 1 },
+  ], part: [{ axis: "x", at: 0, f: 0, door: (z0 + z1) / 2 }, { axis: "x", at: 0, f: 1, door: (z0 + z1) / 2 }] });
+  base(-82, -66, "S", "N", 0xd8c8a4);
+  base(66, 82, "N", "S", 0xd2c19c);
+  crate(-10, -76, 2, 2, 1.0); crate(10, -78, 2, 2, 1.0, MIL); crate(-14, -70, 3, 1, 1.0, STONE);
+  crate(-10, 76, 2, 2, 1.0); crate(10, 78, 2, 2, 1.0, MIL); crate(14, 70, 3, 1, 1.0, STONE);
+
+  // corner shacks (south-east and south-west) and ruins (north-east and north-west)
+  house({ x0: 66, z0: 44, x1: 76, z1: 54, color: 0xd0bd96, open: [
+    { s: "W", at: 5, w: 2.2, kind: "door" }, { s: "N", at: 5, w: 2.2, kind: "win" }, { s: "E", at: 5, w: 2.2, kind: "win" }, { s: "S", at: 5, w: 2.2, kind: "win" },
+  ], props: [[72, 50, 1.4, 1.4, 1.0, WOOD]] });
+  house({ x0: -76, z0: 44, x1: -66, z1: 54, color: 0xcab590, open: [
+    { s: "E", at: 5, w: 2.2, kind: "door" }, { s: "N", at: 5, w: 2.2, kind: "win" }, { s: "W", at: 5, w: 2.2, kind: "win" }, { s: "S", at: 5, w: 2.2, kind: "win" },
+  ], props: [[-72, 50, 1.4, 1.4, 1.0, WOOD]] });
+  for (const sx of [1, -1]) {
+    const x = (v) => sx * v, RC = 0xcbb48a;
+    wallOps(Math.min(x(66), x(80)), -70, Math.max(x(66), x(80)), -70, 0, FH, [{ at: 4, w: 2.4, kind: "win", sill: 0, top: 2.6 }, { at: 10, w: 2.2, kind: "door" }], RC);
+    wallOps(x(80), -70, x(80), -58, 0, FH, [{ at: 6, w: 2.2, kind: "door" }], RC);
+    addBox(x(68), 0, -62, 0.9, FH, 0.9, 0x6e5b44);
+    addBox(x(74), 0, -76, 0.9, 2.2, 0.9, 0x6e5b44);
+    crate(x(72), -64, 2, 2, 1.0); crate(x(76), -66, 1.4, 1.4, 1.0, MIL);
+  }
+  // cover along the new streets
+  for (const [cx, cz, w, d, h, c] of [[50, -74, 3, 3, 1.6, WOOD], [53, -72, 2, 2, 1.1, MIL], [-50, -74, 3, 3, 1.6, WOOD], [-53, -72, 2, 2, 1.1, MIL],
+    [50, 74, 3, 3, 1.6, WOOD], [53, 72, 2, 2, 1.1, MIL], [-50, 74, 3, 3, 1.6, WOOD], [-53, 72, 2, 2, 1.1, MIL],
+    [30, -76, 4, 2, 1.2, STONE], [-30, -76, 4, 2, 1.2, STONE], [30, 76, 4, 2, 1.2, STONE], [-30, 76, 4, 2, 1.2, STONE],
+    [72, -12, 3, 3, 1.6, WOOD], [-72, -12, 3, 3, 1.6, WOOD], [72, 32, 3, 3, 1.6, MIL], [-72, 32, 3, 3, 1.6, MIL]]) crate(cx, cz, w, d, h, c);
+
+  // spawn points: T courtyard, CT spawn, the two sites, then the new streets
   [[-20, 52], [20, 52], [0, 56], [-40, 46], [40, 46], [-8, 50], [8, 50],
    [0, -52], [-12, -55], [12, -55], [-12, -42], [12, -42],
-   [40, -32], [-40, -32], [46, -46], [-46, -46]]
+   [40, -32], [-40, -32], [46, -46], [-46, -46],
+   [72, -6], [-72, -6], [40, 74], [-40, 74]]
     .forEach(p => spawnPoints.push(new THREE.Vector3(p[0], 0, p[1])));
 }
 buildMap();
+buildStaticMesh();
 
 // jump pads: step on one to be launched
 const pads = [[44, -34], [-44, -34]].map(([x, z]) => {
@@ -583,8 +735,8 @@ function addPickup(x, z, kind) {
   g.position.set(x, 1, z); scene.add(g);
   pickups.push({ g, kind, x, z, t: 0 });
 }
-[[0, -28], [-40, -20], [40, -20], [0, 52]].forEach(p => addPickup(p[0], p[1], "hp"));
-[[-42, 10], [44, 10], [-22, 10], [22, 10]].forEach(p => addPickup(p[0], p[1], "ammo"));
+[[0, -28], [-40, -20], [40, -20], [0, 52], [70, -34], [-70, -34], [-10, -73]].forEach(p => addPickup(p[0], p[1], "hp"));
+[[-42, 10], [44, 10], [-22, 10], [22, 10], [70, 21], [-70, 21], [10, 73]].forEach(p => addPickup(p[0], p[1], "ammo"));
 
 // static top-down image of the arena for the minimap
 const MAP_PX = 4;
@@ -598,6 +750,7 @@ mapImg.width = mapImg.height = ARENA * 2 * MAP_PX;
     g.beginPath(); g.moveTo(i * MAP_PX, 0); g.lineTo(i * MAP_PX, mapImg.height); g.moveTo(0, i * MAP_PX); g.lineTo(mapImg.width, i * MAP_PX); g.stroke();
   }
   boxes.slice(4).forEach(b => {   // first 4 boxes are the outer walls
+    if (b.min.y > 1.8) return;      // roofs, upper floors and lintels would hide the rooms below
     g.fillStyle = b.max.y > 5 ? "#d8c08a" : b.max.y > 2.5 ? "#a98f5e" : "#7d6845";
     g.fillRect((b.min.x + ARENA) * MAP_PX, (b.min.z + ARENA) * MAP_PX, (b.max.x - b.min.x) * MAP_PX, (b.max.z - b.min.z) * MAP_PX);
   });
@@ -638,6 +791,9 @@ function moveEntity(e, dt, r, h) {
     if (v.y <= 0) { p.y = b.max.y + EPS; v.y = 0; e.onGround = true; }
     else { p.y = b.min.y - h - EPS; v.y = 0; }
   }
+  if (!e.onGround && v.y <= 0) {   // resting just above a box top counts as standing on it (stops the flag flickering)
+    for (const b of boxes) if (overlaps(p.x, p.y - 0.03, p.z, r, h, b)) { e.onGround = true; break; }
+  }
   p.x = clamp(p.x, -ARENA + r, ARENA - r);
   p.z = clamp(p.z, -ARENA + r, ARENA - r);
   return hitWall;
@@ -645,24 +801,47 @@ function moveEntity(e, dt, r, h) {
 
 // ---------------------------------------------------------------- weapon catalog, saved loadout and coins
 const SLOT_NAMES = ["PRIMARY", "SECONDARY", "SNIPER", "MELEE"];
-const CATALOG = {
-  rifle:    { name: "ASSAULT RIFLE", cls: "Rifle", slot: 0, price: 0, dmg: 22, rate: 0.085, mag: 30, reserve: 120, reload: 1.6, spread: 0.012, adsSpread: 0.003, pellets: 1, auto: true, recoil: 0.012, range: 200, adsFov: 62, sight: true, eject: 0, desc: "Balanced and accurate. Good at every range." },
-  smg:      { name: "SMG", cls: "Submachine gun", slot: 0, price: 300, dmg: 15, rate: 0.06, mag: 35, reserve: 140, reload: 1.4, spread: 0.02, adsSpread: 0.006, pellets: 1, auto: true, recoil: 0.008, range: 120, adsFov: 66, sight: true, eject: 0, sfx: "rifle", desc: "Huge fire rate for close fights, with very little recoil." },
-  lmg:      { name: "LMG", cls: "Light machine gun", slot: 0, price: 750, dmg: 24, rate: 0.1, mag: 60, reserve: 180, reload: 3.4, spread: 0.022, adsSpread: 0.007, pellets: 1, auto: true, recoil: 0.016, range: 200, adsFov: 64, sight: true, eject: 0, sfx: "rifle", desc: "Sixty rounds of heavy fire. Slow to reload." },
-  shotgun:  { name: "SHOTGUN", cls: "Pump shotgun", slot: 1, price: 0, dmg: 14, rate: 0.85, mag: 6, reserve: 30, reload: 2.2, spread: 0.065, adsSpread: 0.045, pellets: 9, auto: false, recoil: 0.07, range: 40, adsFov: 70, falloff: true, eject: 320, desc: "Devastating up close, weak at range." },
-  pistol:   { name: "PISTOL", cls: "Pistol", slot: 1, price: 100, dmg: 24, rate: 0.2, mag: 12, reserve: 72, reload: 1.2, spread: 0.014, adsSpread: 0.004, pellets: 1, auto: false, recoil: 0.03, range: 120, adsFov: 68, sight: true, eject: 0, desc: "Quick to reload. A reliable backup." },
-  revolver: { name: "REVOLVER", cls: "Revolver", slot: 1, price: 450, dmg: 62, rate: 0.55, mag: 6, reserve: 36, reload: 2.1, spread: 0.01, adsSpread: 0.002, pellets: 1, auto: false, recoil: 0.08, range: 160, adsFov: 66, eject: -1, sfx: "sniper", desc: "Hits hard. Two shots to the body." },
-  autoshot: { name: "AUTO SHOTGUN", cls: "Auto shotgun", slot: 1, price: 800, dmg: 9, rate: 0.26, mag: 8, reserve: 48, reload: 2.8, spread: 0.07, adsSpread: 0.05, pellets: 8, auto: true, recoil: 0.04, range: 35, adsFov: 70, falloff: true, eject: 150, sfx: "shotgun", desc: "Full-auto close-range chaos." },
-  sniper:   { name: "SNIPER", cls: "Bolt-action sniper", slot: 2, price: 0, dmg: 100, rate: 1.1, mag: 5, reserve: 20, reload: 2.4, spread: 0.04, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.09, range: 400, adsFov: 20, scope: true, eject: 550, desc: "One shot, one kill. Scope in for the full effect." },
-  marksman: { name: "MARKSMAN", cls: "Semi-auto rifle", slot: 2, price: 650, dmg: 48, rate: 0.28, mag: 10, reserve: 50, reload: 2.2, spread: 0.014, adsSpread: 0.0, pellets: 1, auto: false, recoil: 0.04, range: 320, adsFov: 30, eject: 100, sfx: "sniper", desc: "Fast follow-up shots through a built-in 4x scope." },
-  knife:    { name: "KNIFE", cls: "Melee", slot: 3, price: 0, melee: true, dmg: 55, backstab: 120, rate: 0.5, range: 2.8, mag: 0, reserve: 0, reload: 0, adsFov: 80, desc: "Quiet and fast. Hit someone from behind for 120." },
+// spray patterns: for each bullet in a burst, how far the view kicks [yaw degrees (+ right), pitch degrees (+ up)]
+function makePattern(n, p0, p1, yawAmp, period, phase) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push([yawAmp * Math.sin(i * 2 * Math.PI / period + phase), p0 + (p1 - p0) * (i / Math.max(1, n - 1))]);
+  return out;
+}
+const PATTERNS = {
+  // assault rifle: climbs straight up for ten bullets, then swings left, right, left and right again
+  rifle: [[0, 0.45], [0, 0.9], [0.03, 1.2], [0.03, 1.3], [0, 1.35], [-0.06, 1.2], [-0.18, 1.05], [-0.3, 0.9], [-0.36, 0.7], [-0.3, 0.6],
+    [-0.2, 0.35], [-0.06, 0.2], [0.2, 0.12], [0.36, 0.1], [0.5, 0.06], [0.6, 0.06], [0.6, 0.03], [0.5, 0.05], [0.12, 0], [-0.25, 0],
+    [-0.55, 0.05], [-0.6, 0], [-0.36, 0], [-0.12, 0], [0.18, 0], [0.5, 0.05], [0.65, 0], [0.55, 0], [0.25, 0], [-0.12, 0]],
+  smg: makePattern(30, 0.38, 0.1, 0.22, 11, 0),
+  lmg: makePattern(100, 0.5, 0.12, 0.3, 17, 1),
+  pistol: makePattern(13, 0.9, 0.3, 0.1, 7, 0),
+  revolver: [[0, 3.2]],
+  shotgun: [[0, 2.4]],
+  autoshot: makePattern(7, 0.9, 0.5, 0.2, 5, 0),
+  sniper: [[0, 3.5]],
+  marksman: makePattern(20, 1.4, 0.6, 0.1, 6, 0),
 };
+// dmg: body damage (headshots x4, legs x0.75); acc: standing inaccuracy in degrees; moveAcc / airAcc: extra when running / jumping;
+// shotAcc: inaccuracy added per bullet; speed: movement speed multiplier; reload in seconds
+const CATALOG = {
+  rifle:    { name: "ASSAULT RIFLE", cls: "Rifle", slot: 0, price: 0, dmg: 28, head: 4, rate: 0.1, mag: 30, reserve: 90, reload: 2.4, pellets: 1, auto: true, recoil: 0.012, range: 250, rangeMod: 0.98, acc: 0.3, moveAcc: 5.5, airAcc: 8, shotAcc: 0.2, shotAccMax: 2.2, speed: 0.97, sight: true, eject: 0, desc: "Accurate and deadly. Learn the spray: it climbs, then sways left and right." },
+  smg:      { name: "SMG", cls: "Submachine gun", slot: 0, price: 300, dmg: 16, head: 4, rate: 0.075, mag: 30, reserve: 120, reload: 2.1, pellets: 1, auto: true, recoil: 0.008, range: 150, rangeMod: 0.93, acc: 0.5, moveAcc: 3.5, airAcc: 7, shotAcc: 0.1, shotAccMax: 1.4, speed: 1.03, sight: true, eject: 0, sfx: "rifle", desc: "Fast fire and light recoil. Stays accurate while moving." },
+  lmg:      { name: "LMG", cls: "Light machine gun", slot: 0, price: 750, dmg: 26, head: 4, rate: 0.08, mag: 100, reserve: 200, reload: 4.6, pellets: 1, auto: true, recoil: 0.016, range: 250, rangeMod: 0.98, acc: 0.6, moveAcc: 7, airAcc: 10, shotAcc: 0.16, shotAccMax: 3, speed: 0.86, sight: true, eject: 0, sfx: "rifle", desc: "A hundred rounds. Slow to move and slow to reload." },
+  shotgun:  { name: "SHOTGUN", cls: "Pump shotgun", slot: 1, price: 0, dmg: 14, head: 1.5, rate: 0.88, mag: 8, reserve: 32, reload: 2.6, pellets: 9, auto: false, recoil: 0.07, range: 40, acc: 2.6, moveAcc: 1.6, airAcc: 2, shotAcc: 0, speed: 0.96, falloff: true, eject: 320, desc: "Devastating up close, weak at range." },
+  pistol:   { name: "PISTOL", cls: "Pistol", slot: 1, price: 100, dmg: 22, head: 4, rate: 0.15, mag: 13, reserve: 52, reload: 2.2, pellets: 1, auto: false, recoil: 0.03, range: 150, rangeMod: 0.94, acc: 0.25, moveAcc: 3.5, airAcc: 6, shotAcc: 0.5, shotAccMax: 1.8, speed: 1.05, sight: true, eject: 0, desc: "Accurate with the first shots. Tap, don't spray." },
+  revolver: { name: "REVOLVER", cls: "Revolver", slot: 1, price: 450, dmg: 70, head: 4, rate: 0.5, mag: 8, reserve: 16, reload: 2.4, pellets: 1, auto: false, recoil: 0.08, range: 200, rangeMod: 0.97, acc: 0.12, moveAcc: 4, airAcc: 7, shotAcc: 1.4, shotAccMax: 1.4, speed: 1.0, eject: -1, sfx: "sniper", desc: "Two body shots or one to the head." },
+  autoshot: { name: "AUTO SHOTGUN", cls: "Auto shotgun", slot: 1, price: 800, dmg: 9, head: 1.5, rate: 0.35, mag: 7, reserve: 32, reload: 2.8, pellets: 8, auto: true, recoil: 0.04, range: 35, acc: 3.2, moveAcc: 1.5, airAcc: 2, shotAcc: 0.2, shotAccMax: 0.8, speed: 0.95, falloff: true, eject: 150, sfx: "shotgun", desc: "Full-auto close-range chaos." },
+  sniper:   { name: "SNIPER", cls: "Bolt-action sniper", slot: 2, price: 0, dmg: 115, head: 4, rate: 1.45, mag: 10, reserve: 30, reload: 3.7, pellets: 1, auto: false, recoil: 0.09, range: 600, rangeMod: 0.99, acc: 3.6, scopedAcc: 0.06, moveAcc: 9, airAcc: 12, shotAcc: 0, speed: 0.9, scope: true, zoomFov: [40, 15], eject: 550, desc: "One shot, one kill. Right click to scope. Wildly inaccurate unscoped or moving." },
+  marksman: { name: "MARKSMAN", cls: "Semi-auto rifle", slot: 2, price: 650, dmg: 62, head: 4, rate: 0.25, mag: 20, reserve: 90, reload: 3.1, pellets: 1, auto: false, recoil: 0.04, range: 400, rangeMod: 0.98, acc: 2.6, scopedAcc: 0.1, moveAcc: 6, airAcc: 9, shotAcc: 0.35, shotAccMax: 1.4, speed: 0.92, scope: true, zoomFov: [40, 15], eject: 100, sfx: "sniper", desc: "Semi-auto with a scope. Right click to zoom, stand still to hit." },
+  knife:    { name: "KNIFE", cls: "Melee", slot: 3, price: 0, melee: true, dmg: 55, backstab: 120, rate: 0.5, range: 2.8, mag: 0, reserve: 0, reload: 0, speed: 1.1, desc: "Quiet and fast. Hit someone from behind for 120." },
+};
+Object.keys(CATALOG).forEach(k => { CATALOG[k].pattern = PATTERNS[k] || [[0, 0.5]]; });
 Object.keys(CATALOG).forEach(k => { CATALOG[k].key = k; });
 const SIGHTS = {
   iron:   { name: "IRON SIGHTS", price: 0 },
   reddot: { name: "RED DOT", price: 150 },
   holo:   { name: "HOLOGRAPHIC", price: 250 },
-  acog:   { name: "4X SCOPE", price: 450, fov: 36 },
+  acog:   { name: "ACOG", price: 450 },
 };
 const DEFAULT_SAVE = () => ({ coins: 200, owned: ["rifle", "shotgun", "sniper", "knife"], sights: ["iron", "reddot"], slots: ["rifle", "shotgun", "sniper", "knife"], sightOn: { rifle: "reddot" } });
 let save = DEFAULT_SAVE();
@@ -682,7 +861,6 @@ function weaponDef(key) {   // catalog entry plus the sight you picked for it
   if (d.sight) {
     const id = save.sights.includes(save.sightOn[key]) ? save.sightOn[key] : "iron";
     d.sightId = id;
-    if (SIGHTS[id].fov) d.adsFov = SIGHTS[id].fov;
   }
   return d;
 }
@@ -950,7 +1128,7 @@ const player = {
   hp: 100, alive: true, crouch: false, sliding: 0,
   kills: 0, deaths: 0,
   weapon: 0, ammo: WEAPONS.map(w => ({ mag: w.mag, res: w.reserve })),
-  reloading: 0, cooldown: 0, swingT: 0, prevWeapon: 0, ads: false, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0, recoilP: 0, recoilY: 0, prev: new THREE.Vector3(0, 0, 45),
+  reloading: 0, cooldown: 0, swingT: 0, prevWeapon: 0, ads: false, zoom: 0, sprayN: 0, lastShotT: 0, shotInacc: 0, recoilKick: 0, bob: 0, lastHurt: 0, dashCd: 0, padCd: 0, recoilP: 0, recoilY: 0, prev: new THREE.Vector3(0, 0, 45),
 };
 const R = 0.4, STAND_H = 1.8, CROUCH_H = 1.1;
 const keys = {};
@@ -965,7 +1143,7 @@ function eyeHeight() { return playerHeight() - 0.15; }
 function respawnPlayer(spawn) {
   const sp = spawn || pickSpawn();
   player.pos.copy(sp); player.vel.set(0, 0, 0);
-  player.prev.copy(sp); player.recoilP = 0; player.recoilY = 0;
+  player.prev.copy(sp); player.recoilP = 0; player.recoilY = 0; player.sprayN = 0; player.shotInacc = 0; player.zoom = 0;
   player.hp = 100; player.alive = true; player.crouch = false; player.reloading = 0;
   player.ammo = WEAPONS.map(w => ({ mag: w.mag, res: w.reserve }));
   player.yaw = Math.atan2(sp.x, sp.z); player.pitch = 0;
@@ -985,12 +1163,15 @@ function pickSpawn() {
 }
 
 // ---------------------------------------------------------------- bot navigation (flow field toward the player)
-const NAV_N = ARENA * 2;
+const NAV_S = 0.5;                       // size of one navigation cell: fine enough for 2.4 wide doorways
+const NAV_N = ARENA * 2 / NAV_S;
 const navBlocked = new Uint8Array(NAV_N * NAV_N), navDist = new Int16Array(NAV_N * NAV_N), navQ = new Int32Array(NAV_N * NAV_N);
 const NAV_DX = [1, -1, 0, 0, 1, 1, -1, -1], NAV_DZ = [0, 0, 1, -1, 1, -1, 1, -1];
-for (let cz = 0; cz < NAV_N; cz++) for (let cx = 0; cx < NAV_N; cx++) {
-  const x0 = cx - ARENA - 0.45, x1 = cx - ARENA + 1.45, z0 = cz - ARENA - 0.45, z1 = cz - ARENA + 1.45;
-  for (const b of boxes) if (b.max.y > 0.6 && x1 > b.min.x && x0 < b.max.x && z1 > b.min.z && z0 < b.max.z) { navBlocked[cz * NAV_N + cx] = 1; break; }
+for (const b of boxes) {   // block every cell a wall or crate (at body height) comes within 0.45 of
+  if (!(b.max.y > 0.6 && b.min.y < 1.8)) continue;
+  const cx0 = Math.max(0, Math.floor((b.min.x - 0.45 + ARENA) / NAV_S)), cx1 = Math.min(NAV_N - 1, Math.ceil((b.max.x + 0.45 + ARENA) / NAV_S) - 1);
+  const cz0 = Math.max(0, Math.floor((b.min.z - 0.45 + ARENA) / NAV_S)), cz1 = Math.min(NAV_N - 1, Math.ceil((b.max.z + 0.45 + ARENA) / NAV_S) - 1);
+  for (let cz = cz0; cz <= cz1; cz++) for (let cx = cx0; cx <= cx1; cx++) navBlocked[cz * NAV_N + cx] = 1;
 }
 function bfsField(start, dist) {   // walking distance from one cell to every other cell
   dist.fill(-1);
@@ -1008,7 +1189,7 @@ function bfsField(start, dist) {   // walking distance from one cell to every ot
     }
   }
 }
-const cellOf = (x, z) => clamp(Math.floor(z + ARENA), 0, NAV_N - 1) * NAV_N + clamp(Math.floor(x + ARENA), 0, NAV_N - 1);
+const cellOf = (x, z) => clamp(Math.floor((z + ARENA) / NAV_S), 0, NAV_N - 1) * NAV_N + clamp(Math.floor((x + ARENA) / NAV_S), 0, NAV_N - 1);
 let navCell = -1, navT = 0;
 function updateFlow(dt) {   // field that leads toward the player
   navT -= dt;
@@ -1020,7 +1201,7 @@ function updateFlow(dt) {   // field that leads toward the player
 // centre of the neighbouring cell that is closest to the goal of the given field
 function flowStep(b, dist) {
   dist = dist || navDist;
-  const x = clamp(Math.floor(b.pos.x + ARENA), 0, NAV_N - 1), z = clamp(Math.floor(b.pos.z + ARENA), 0, NAV_N - 1), c = z * NAV_N + x;
+  const x = clamp(Math.floor((b.pos.x + ARENA) / NAV_S), 0, NAV_N - 1), z = clamp(Math.floor((b.pos.z + ARENA) / NAV_S), 0, NAV_N - 1), c = z * NAV_N + x;
   let best = dist[c] >= 0 ? dist[c] : 1e9, bx = -1, bz = -1;
   for (let k = 0; k < 8; k++) {
     const nx = x + NAV_DX[k], nz = z + NAV_DZ[k];
@@ -1030,7 +1211,7 @@ function flowStep(b, dist) {
     if (k >= 4 && (navBlocked[z * NAV_N + nx] || navBlocked[nz * NAV_N + x])) continue;
     best = d; bx = nx; bz = nz;
   }
-  return bx < 0 ? null : { x: bx - ARENA + 0.5, z: bz - ARENA + 0.5 };
+  return bx < 0 ? null : { x: bx * NAV_S - ARENA + NAV_S / 2, z: bz * NAV_S - ARENA + NAV_S / 2 };
 }
 
 // ---------------------------------------------------------------- team mode: bomb defusal (5v5)
@@ -1123,7 +1304,7 @@ function nextRound() {
     b.holdR = 5 + Math.random() * 5;
     b.site = b.team === "T" ? round.tSite : (ctN++ % 2 === 0 ? "A" : "B");
   }
-  round.carrier = null; ensureCarrier();
+  round.carrier = player.team === "T" ? "player" : null; ensureCarrier();   // a terrorist player starts with the bomb
   banner("ROUND " + round.no);
   msg(player.team === "T" ? "YOU ARE A TERRORIST · plant the bomb at A or B (hold E)" : "YOU ARE A COUNTER-TERRORIST · stop the bomb", 3200);
   updateHud();
@@ -1328,7 +1509,7 @@ function makeModel(color) {
   legL.position.set(-0.17, 0.3, 0); legR.position.set(0.17, 0.3, 0);
   [body, head, legL, legR].forEach(m => { m.castShadow = true; });
   body.userData = { part: "body" }; head.userData = { part: "head" };
-  legL.userData = { part: "body" }; legR.userData = { part: "body" };
+  legL.userData = { part: "leg" }; legR.userData = { part: "leg" };
   g.add(body, head, legL, legR);
 
   // torso: plate carrier, belt, pouches, backpack
@@ -1534,12 +1715,12 @@ function updateBots(dt) {
         b.lastShot = performance.now();   // shows up on your radar
         const to = new THREE.Vector3(player.pos.x, player.pos.y + 1.0, player.pos.z);
         spawnTracer(from, to.add(jitter()), 0xff6666);
-        if (Math.random() < acc) damagePlayer(7 + Math.random() * 3, b);
+        if (Math.random() < acc) damagePlayer(15 + Math.random() * 8, b);
       } else {
         if (TM && b.team !== player.team) b.lastShot = performance.now();
         const to = new THREE.Vector3(tgt.pos.x, tgt.pos.y + 1.0, tgt.pos.z);
         spawnTracer(from, to.add(jitter()), 0xffb066);
-        if (Math.random() < acc * 0.8) damageBot(tgt, 7 + Math.random() * 3, b);
+        if (Math.random() < acc * 0.8) damageBot(tgt, 15 + Math.random() * 8, b);
       }
     }
   }
@@ -1614,6 +1795,46 @@ function botMeshes() {
   for (const r of net.remotes.values()) if (r.alive) out.push(r.body, r.head, r.legL, r.legR);
   return out;
 }
+const DEG = Math.PI / 180;
+const runSpeed = w => 8.2 * (w.speed || 1);
+// cone of possible bullet directions in degrees: tight when standing or crouching, wide when running or jumping
+function inaccDeg(w) {
+  if (w.melee) return 0;
+  const spd = Math.hypot(player.vel.x, player.vel.z), vmax = runSpeed(w);
+  const zoomed = w.scope && player.zoom > 0;
+  let a = zoomed ? w.scopedAcc : w.acc;
+  if (player.crouch && player.onGround) a *= 0.6;
+  if (player.onGround) a += w.moveAcc * (zoomed ? 0.8 : 1) * clamp((spd - 0.34 * vmax) / (0.66 * vmax), 0, 1);   // slow walking stays accurate
+  else a += w.airAcc;
+  return a + player.shotInacc;
+}
+// every bullet kicks the view along the weapon's fixed spray pattern
+function applyRecoil(w) {
+  const pat = w.pattern, i = Math.min(Math.floor(player.sprayN), pat.length - 1);
+  player.recoilY -= pat[i][0] * DEG;
+  player.recoilP += pat[i][1] * DEG;
+  player.sprayN += 1;
+  player.lastShotT = performance.now() / 1000;
+  player.shotInacc = Math.min(w.shotAccMax || 0, player.shotInacc + (w.shotAcc || 0));
+}
+// the view settles back and the spray pattern resets a moment after you stop shooting
+function updatePunch(dt) {
+  const w = WEAPONS[player.weapon], now = performance.now() / 1000;
+  if (now - player.lastShotT > (w.rate || 0.1) + 0.12) {
+    const k = Math.pow(0.03, dt);
+    player.recoilP *= k; player.recoilY *= k;
+    player.sprayN = Math.max(0, player.sprayN - dt * 1.6 / Math.max(0.06, w.rate));
+  }
+  player.shotInacc = Math.max(0, player.shotInacc - dt * 5);
+}
+const zoomFovNow = () => (WEAPONS[player.weapon].zoomFov || [40, 15])[Math.max(0, player.zoom - 1)];
+function cycleZoom() {   // right click: only scoped weapons zoom (two levels, then off)
+  const w = WEAPONS[player.weapon];
+  if (!w.scope || !player.alive || player.reloading > 0) return;
+  player.zoom = (player.zoom + 1) % 3; player.ads = player.zoom > 0;
+  sfx.empty();
+}
+
 function shoot() {
   const w = WEAPONS[player.weapon], a = player.ammo[player.weapon];
   if (player.reloading > 0 || player.cooldown > 0 || !player.alive || matchOverT > 0 || (round.active && round.phase === "freeze")) return;
@@ -1621,9 +1842,7 @@ function shoot() {
   if (a.mag <= 0) { sfx.empty(); player.cooldown = 0.25; if (a.res > 0) reload(); return; }
   a.mag--; player.cooldown = w.rate;
   sfx[w.sfx || w.key]();
-  const spreadBase = player.ads ? w.adsSpread : w.spread;
-  const moving = Math.hypot(player.vel.x, player.vel.z) > 3 ? 1.6 : 1;
-  const spread = spreadBase * moving * (player.onGround ? 1 : 2);
+  const spread = Math.tan(inaccDeg(w) * DEG);   // bullets land inside this cone
   const origin = camera.getWorldPosition(new THREE.Vector3());
   const targets = botMeshes().concat(wallMeshes);
   let hitAny = false, killed = false, headshot = false;
@@ -1631,7 +1850,8 @@ function shoot() {
   let shotFrom = null, shotTo = null;
   for (let i = 0; i < w.pellets; i++) {
     const dir = new THREE.Vector3(0, 0, -1);
-    dir.x += rand(-spread, spread); dir.y += rand(-spread, spread);
+    const ang = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * spread;
+    dir.x += Math.cos(ang) * rr; dir.y += Math.sin(ang) * rr;
     dir.applyQuaternion(camera.quaternion).normalize();
     ray.set(origin, dir); ray.far = w.range;
     const hits = ray.intersectObjects(targets, false);
@@ -1640,9 +1860,10 @@ function shoot() {
       const h = hits[0]; end.copy(h.point);
       const bot = h.object.userData.bot, rem = h.object.userData.remote;
       if (bot || rem) {
-        const isHead = h.object.userData.part === "head";
-        let d = w.dmg * (isHead ? 2 : 1);
+        const part = h.object.userData.part, isHead = part === "head";
+        let d = w.dmg * (isHead ? (w.head || 4) : part === "leg" ? 0.75 : 1);
         if (w.falloff) d *= clamp(1.3 - h.distance / 35, 0.2, 1);
+        else d *= Math.pow(w.rangeMod || 0.98, h.distance * 0.08);
         if (bot) dmgPer[bot.id] = (dmgPer[bot.id] || 0) + d;
         else { const rd = dmgRem[rem.id] || (dmgRem[rem.id] = { d: 0, head: false }); rd.d += d; if (isHead) rd.head = true; }
         if (isHead) headshot = true;
@@ -1671,8 +1892,7 @@ function shoot() {
   if (hitAny) (headshot ? sfx.head : sfx.hit)();
   // recoil
   player.recoilKick += w.recoil;
-  player.recoilP += w.recoil * (player.ads ? 0.5 : 1) * (0.6 + Math.random() * 0.4);
-  player.recoilY += rand(-0.25, 0.25) * w.recoil;
+  applyRecoil(w);
   muzzleFlash();
   if (w.eject >= 0) ejectShell(w.eject);
   if (a.mag <= 0 && a.res > 0) setTimeout(reload, 200);
@@ -1718,7 +1938,7 @@ function finishReload() {
 }
 function switchWeapon(i) {
   if (i === player.weapon || i < 0 || i >= WEAPONS.length) return;
-  player.weapon = i; player.reloading = 0; player.cooldown = 0.25; player.ads = false;
+  player.weapon = i; player.reloading = 0; player.cooldown = 0.45; player.ads = false; player.sprayN = 0;
   gunMeshes.forEach((g, j) => g.visible = j === i);
   updateHud();
 }
@@ -2400,7 +2620,7 @@ function renderArmory() {
       chip.addEventListener("click", () => has ? equipSight(key, id) : buySight(id));
       chips.appendChild(chip);
     }
-    $("sightHint").textContent = owned ? "Sights you buy work on every gun that takes them." : "Buy the weapon to fit a sight to it. You can still preview them.";
+    $("sightHint").textContent = owned ? "Sights are cosmetic and work on every gun that takes them. Only the sniper and marksman zoom (right click)." : "Buy the weapon to fit a sight to it. You can still preview them.";
   } else $("sightHint").textContent = d.melee ? "" : "This weapon has its own built-in sights.";
   $("prevCap").textContent = d.cls.toUpperCase();
   previewSet(key, cur);
@@ -2631,7 +2851,7 @@ addEventListener("mousemove", e => {
 // mouse movement is summed up and applied once per frame, scaled by zoom so aiming feels the same at any FOV
 function applyLook() {
   if (!player.alive || (!mouseDX && !mouseDY)) { mouseDX = mouseDY = 0; return; }
-  const zoom = player.ads ? WEAPONS[player.weapon].adsFov / baseFov : 1;
+  const zoom = player.ads ? zoomFovNow() / baseFov : 1;
   const k = 0.0022 * sens * zoom;
   player.yaw -= mouseDX * k;
   player.pitch = clamp(player.pitch - mouseDY * k, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
@@ -2643,11 +2863,10 @@ function applyLook() {
 addEventListener("mousedown", e => {
   if (!playing) return;
   if (e.button === 0) { mouseDown = true; shoot(); }
-  if (e.button === 2 && player.reloading <= 0 && !WEAPONS[player.weapon].melee) player.ads = true;
+  if (e.button === 2) cycleZoom();
 });
 addEventListener("mouseup", e => {
   if (e.button === 0) mouseDown = false;
-  if (e.button === 2) player.ads = false;
 });
 addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("wheel", e => {
@@ -2665,7 +2884,6 @@ addEventListener("keydown", e => {
   if (e.code === "Digit3") switchWeapon(2);
   if (e.code === "Digit4") switchWeapon(3);
   if (e.code === "KeyV") { if (player.weapon === 3) switchWeapon(player.prevWeapon); else { player.prevWeapon = player.weapon; switchWeapon(3); } }
-  if (e.code === "KeyQ" && !e.repeat) dash();
 });
 addEventListener("keyup", e => { keys[e.code] = false; if (e.code === "Tab" && matchOverT <= 0) showBoard(false); });
 
@@ -2683,7 +2901,6 @@ function updatePlayer(dt) {
   const speed2d = Math.hypot(player.vel.x, player.vel.z);
   if (wantCrouch && !player.crouch) {
     player.crouch = true;
-    if (player.onGround && speed2d > 6 && keys.ShiftLeft) player.sliding = 0.8;
   } else if (!wantCrouch && player.crouch) {
     // only stand if there's headroom
     player.crouch = false;
@@ -2701,11 +2918,12 @@ function updatePlayer(dt) {
   const locked = round.active && (round.busy || round.phase === "freeze");   // planting, defusing or round start
   if (locked) wishDir.set(0, 0, 0);
 
-  let maxSpeed = 8.5;
-  if (keys.ShiftLeft && f > 0 && !player.crouch && !player.ads) maxSpeed = 11;
-  if (player.crouch) maxSpeed = 4;
-  if (player.ads) maxSpeed *= 0.65;
-  if (player.reloading > 0) maxSpeed *= 0.9;
+  if (!player.ads && player.zoom) player.zoom = 0;   // reloading, switching or dying drops the scope
+  const rv = runSpeed(WEAPONS[player.weapon]);
+  let maxSpeed = rv;
+  if (keys.ShiftLeft) maxSpeed = rv * 0.52;   // walk: slower, quiet and accurate
+  if (player.crouch) maxSpeed = rv * 0.34;
+  if (player.ads) maxSpeed = rv * 0.4;        // scoped
 
   const sliding = player.sliding > 0 && player.onGround;
   if (player.onGround) {
@@ -2727,6 +2945,10 @@ function updatePlayer(dt) {
 
   const preVy = player.vel.y, wasGround = player.onGround;
   moveEntity(player, dt, R, playerHeight());
+  if (!player.onGround) {   // no bunny-hop speed gain
+    const hs = Math.hypot(player.vel.x, player.vel.z), cap = rv * 1.12;
+    if (hs > cap) { player.vel.x *= cap / hs; player.vel.z *= cap / hs; }
+  }
   if (!wasGround && player.onGround && preVy < -6) landDip = Math.min(0.2, -preVy * 0.012);
 
   // jump pads and dash cooldown
@@ -2749,13 +2971,6 @@ function updatePlayer(dt) {
     if (player.reloading <= 0) { player.reloading = 0; finishReload(); }
   }
   if (mouseDown && WEAPONS[player.weapon].auto) shoot();
-}
-function dash() {
-  if (!playing || !player.alive || player.dashCd > 0) return;
-  const d = wishDir.lengthSq() > 0 ? wishDir.clone() : new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-  player.vel.x = d.x * 22; player.vel.z = d.z * 22;
-  if (player.onGround) player.sliding = 0.25; else player.vel.y = Math.max(player.vel.y, 2);
-  player.dashCd = 2.5; fovKick = 14; shake = Math.min(1, shake + 0.2); sfx.dash();
 }
 function accelerate(wish, maxSpeed, accel, dt) {
   const cur = player.vel.x * wish.x + player.vel.z * wish.z;
@@ -2783,7 +2998,7 @@ let chT = 0, chEnemy = false, chShown = false, chGap = 6, vigOn = false;
 function updateCamera(dt) {
   const w = WEAPONS[player.weapon];
   fovKick *= Math.pow(0.0005, dt);
-  const targetFov = (player.ads ? w.adsFov : baseFov + (Math.hypot(player.vel.x, player.vel.z) > 10 ? 4 : 0)) + fovKick;
+  const targetFov = (player.ads ? zoomFovNow() : baseFov) + fovKick;
   fovCur += (targetFov - fovCur) * Math.min(1, dt * 14);
   if (Math.abs(camera.fov - fovCur) > 0.01) { camera.fov = fovCur; camera.updateProjectionMatrix(); }
 
@@ -2795,8 +3010,7 @@ function updateCamera(dt) {
   const ix = player.prev.x + (player.pos.x - player.prev.x) * al, iy = player.prev.y + (player.pos.y - player.prev.y) * al, iz = player.prev.z + (player.pos.z - player.prev.z) * al;
   landDip *= Math.pow(0.003, dt);
   camera.position.set(ix + (player.onGround ? bobX : 0), iy + camY - landDip + (player.onGround ? bobY * 0.5 : 0), iz);
-  const rk = Math.pow(0.08, dt);
-  player.recoilP *= rk; player.recoilY *= rk;
+  updatePunch(dt);
   sway.x *= Math.pow(0.0005, dt); sway.y *= Math.pow(0.0005, dt);
   player.recoilKick *= Math.pow(0.001, dt);
   camera.rotation.set(player.pitch + player.recoilP, player.yaw + player.recoilY, player.alive ? Math.sin(player.bob * 0.5) * 0.002 : 0.6);
@@ -2816,7 +3030,7 @@ function updateCamera(dt) {
   }
   // gun position/animation
   const scoped = player.ads && w.scope;
-  const target = player.ads ? gunMeshes[player.weapon].userData.ads : GUN_HIP;
+  const target = GUN_HIP;
   gunGroup.position.lerp(target, Math.min(1, dt * 16));
   gunGroup.position.z += player.recoilKick * 1.2;
   player.swingT = Math.max(0, player.swingT - dt);
@@ -2825,15 +3039,15 @@ function updateCamera(dt) {
   gunGroup.rotation.z = -swing * 1.2;
   gunGroup.rotation.y = sway.x;
   gunGroup.rotation.x = sway.y + player.recoilKick * 2 - swing * 0.7 + (player.reloading > 0 ? -0.8 * Math.sin((1 - player.reloading / w.reload) * Math.PI) : 0);
-  gunGroup.visible = player.alive && !(scoped && fovCur < 30);
-  $("scope").style.display = scoped && fovCur < 30 ? "block" : "none";
+  gunGroup.visible = player.alive && !scoped;
+  $("scope").style.display = scoped ? "block" : "none";
   $("crosshair").style.display = player.ads ? "none" : "block";
 
   // crosshair opens with movement, jumping and firing, and turns red over an enemy
   chT -= dt;
   if (chT <= 0) { chT = 0.05; chEnemy = player.alive && !w.melee ? aimingAtEnemy() : false; }
   const spd = Math.hypot(player.vel.x, player.vel.z);
-  const gapT = 5 + (w.spread || 0.01) * 260 * (spd > 3 ? 1.6 : 1) * (player.onGround ? 1 : 2) + player.recoilKick * 260;
+  const gapT = 4 + inaccDeg(w) * 3.4;   // the crosshair shows how inaccurate you are right now
   chGap += (gapT - chGap) * Math.min(1, dt * 18);
   const chEl = $("crosshair");
   chEl.style.setProperty("--gap", chGap.toFixed(1) + "px");
@@ -2882,7 +3096,7 @@ function loop() {
   } else {
     // idle menu camera orbit
     const t = performance.now() * 0.0001;
-    camera.position.set(Math.sin(t) * 55, 48, Math.cos(t) * 55);
+    camera.position.set(Math.sin(t) * 80, 70, Math.cos(t) * 80);
     camera.lookAt(0, 3, 0);
     gunGroup.visible = false;
     if (armoryOpen) renderPreview(dt);
@@ -2894,7 +3108,7 @@ function loop() {
 loop();
 
 // expose for debugging/tests
-window.__game = { round, ROUND, SITES, startTeamMode, WEAPONS, save, CATALOG, player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
+window.__game = { mapImg, NAV_S, inaccDeg, applyRecoil, updatePunch, runSpeed, cycleZoom, round, ROUND, SITES, startTeamMode, WEAPONS, save, CATALOG, player, bots, boxes, scene, camera, setBotCount, net, spawnPoints, navBlocked, navDist, NAV_N, ARENA };
 })();
 </script>
 </body>
