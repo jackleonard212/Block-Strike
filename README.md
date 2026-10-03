@@ -100,3 +100,7 @@ Your coins and loadout are saved in your browser. Other players see the weapon y
 
 WASD move, Shift walk, Space jump, C/Ctrl crouch,
 Mouse1 shoot, Mouse2 scope (sniper and marksman), R reload, 1/2/3 or wheel switch weapon, 4 or V knife, Tab scoreboard, E plant or defuse.
+
+## Fullscreen and browser shortcuts
+
+Click **FULLSCREEN** in the menu (or leave "Go fullscreen when I press Play" on in Settings). In fullscreen, Chrome/Edge lock W/A/S/D, Shift, Ctrl etc. so browser shortcuts can't close the tab. Firefox/Safari don't support Keyboard Lock; they show a confirmation before closing while you're playing. Esc always releases the mouse.

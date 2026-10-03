@@ -58,7 +58,7 @@
   .dn{position:absolute;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 3px #000;animation:dn .8s ease-out forwards;transform:translate(-50%,-50%)}
   .dn.h{color:#facc15;font-size:30px}
   @keyframes dn{0%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-60px}}
-  #menu{--panel:rgba(14,18,27,.82);--line:rgba(255,255,255,.1);--amber:#ffb020;--amber2:#ff7a18;--cyan:#3ee0ff;--ink:#e8edf5;--mute:#8d99ad;--good:#4ade80;--bad:#ff6b6b;
+  #menu{cursor:default;--panel:rgba(14,18,27,.82);--line:rgba(255,255,255,.1);--amber:#ffb020;--amber2:#ff7a18;--cyan:#3ee0ff;--ink:#e8edf5;--mute:#8d99ad;--good:#4ade80;--bad:#ff6b6b;
     position:fixed;inset:0;z-index:5;display:flex;font-family:"Rajdhani","Segoe UI",Arial,sans-serif;color:var(--ink);
     background:linear-gradient(100deg,rgba(6,8,13,.95) 0,rgba(6,8,13,.88) 32%,rgba(6,8,13,.58) 100%)}
   #menu .rail{width:270px;flex:none;padding:28px 22px;display:flex;flex-direction:column;gap:26px;border-right:1px solid var(--line);background:linear-gradient(180deg,rgba(255,176,32,.07),transparent 40%)}
@@ -201,6 +201,7 @@
       <button class="nav" type="button" data-tab="armory">ARMORY</button>
       <button class="nav" type="button" data-tab="settings">SETTINGS</button>
     </nav>
+    <button id="fsBtn" class="small alt" type="button" style="margin-top:-8px">⛶ FULLSCREEN</button>
     <div class="wallet">
       <div class="lbl">COINS</div>
       <div class="amt"><i class="coin"></i><b id="coins">0</b></div>
@@ -293,6 +294,13 @@
             <input id="fov" type="range" min="70" max="110" step="1" value="85">
           </label>
         </div>
+      </div>
+      <div class="card">
+        <div class="h2">Screen</div>
+        <label style="display:flex;gap:10px;align-items:center;font-size:18px;font-weight:600;letter-spacing:1px;color:var(--ink)">
+          <input id="fsAuto" type="checkbox" checked style="width:20px;height:20px;accent-color:var(--amber)"> Go fullscreen when I press Play
+        </label>
+        <div class="hint" style="margin-top:8px">Fullscreen stops the browser from grabbing keys like Ctrl+W and Shift+W, so it can't close your tab mid-game. It works best in Chrome and Edge. Hold Esc to leave fullscreen.</div>
       </div>
       <div class="card">
         <div class="h2">Controls</div>
@@ -2815,16 +2823,59 @@ $("play").addEventListener("click", () => {
     if (!target) { setNote("Host a room, type a friend's room code, or pick a server.", true); return; }
     netConnect(target, name);
   } else netDisconnect();
-  try {
-    const el = renderer.domElement;
-    const plain = () => { try { const r2 = el.requestPointerLock(); if (r2 && r2.catch) r2.catch(lockFailed); } catch (e2) { lockFailed(); } };
-    let r;
-    try { r = el.requestPointerLock({ unadjustedMovement: true }); } catch (e) { plain(); r = null; }
-    if (r && r.catch) r.catch(plain);
-  } catch (e) { lockFailed(); }
+  if ($("fsAuto").checked) enterFullscreen().then(requestLock); else requestLock();
 });
+// ask for mouse capture (raw input where the browser supports it), without ever sending two requests at once
+let lockBusy = false;
+function requestLock() {
+  const el = renderer.domElement;
+  if (lockBusy || document.pointerLockElement === el) return;
+  lockBusy = true;
+  const done = () => { lockBusy = false; };
+  const plain = () => {
+    try { const r2 = el.requestPointerLock(); if (r2 && r2.then) r2.then(done, () => { done(); lockFailed(); }); else done(); }
+    catch (e2) { done(); lockFailed(); }
+  };
+  try {
+    const r = el.requestPointerLock({ unadjustedMovement: true });
+    if (r && r.then) r.then(done, plain); else done();
+  } catch (e) { plain(); }
+}
+// fullscreen plus Keyboard Lock (Chrome/Edge): the page gets W/A/S/D, Shift, Ctrl combos instead of the browser
+const LOCK_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "KeyR", "KeyC", "KeyV", "KeyF", "Tab", "Space", "ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight", "Digit1", "Digit2", "Digit3", "Digit4"];
+function lockKeys() { try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(LOCK_KEYS).catch(() => { /* not allowed */ }); } catch (e) { /* unsupported */ } }
+function enterFullscreen() {
+  const el = document.documentElement;
+  if (document.fullscreenElement || !el.requestFullscreen) return Promise.resolve();
+  let r;
+  try { r = el.requestFullscreen({ navigationUI: "hide" }); } catch (e) { return Promise.resolve(); }
+  return Promise.race([Promise.resolve(r).then(lockKeys), new Promise(res => setTimeout(res, 900))]).catch(() => { /* carry on windowed */ });
+}
+$("fsBtn").addEventListener("click", () => {
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { /* ignore */ } }
+  else enterFullscreen();
+});
+document.addEventListener("fullscreenchange", () => {
+  const fs = !!document.fullscreenElement;
+  $("fsBtn").textContent = fs ? "⛶ EXIT FULLSCREEN" : "⛶ FULLSCREEN";
+  if (fs) lockKeys(); else { try { navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); } catch (e) { /* ignore */ } }
+});
+try { $("fsAuto").checked = localStorage.getItem("bs_fs") !== "0"; } catch (e) { /* storage unavailable */ }
+$("fsAuto").addEventListener("change", () => { try { localStorage.setItem("bs_fs", $("fsAuto").checked ? "1" : "0"); } catch (e) { /* ignore */ } });
+
+// a stuck-invisible mouse after leaving the game: always hand the cursor back
+function restoreCursor() {
+  document.documentElement.style.cursor = ""; document.body.style.cursor = ""; renderer.domElement.style.cursor = "";
+  menu.style.cursor = "default";
+}
+menu.addEventListener("mousemove", restoreCursor);
+addEventListener("focus", () => { if (!playing) restoreCursor(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && document.pointerLockElement) document.exitPointerLock(); });
+// closing the tab while you play asks first, so a stray shortcut can't throw the match away
+addEventListener("beforeunload", e => { if (playing) { e.preventDefault(); e.returnValue = ""; } });
+
 function lockFailed() { netDisconnect(); setNote("Mouse capture was blocked. Click Play again, or use a desktop browser.", true); }
-document.addEventListener("pointerlockerror", lockFailed);
+document.addEventListener("pointerlockerror", () => { lockBusy = false; restoreCursor(); lockFailed(); });
 document.addEventListener("pointerlockchange", () => {
   playing = document.pointerLockElement === renderer.domElement;
   menu.style.display = playing ? "none" : "flex";
@@ -2837,7 +2888,10 @@ document.addEventListener("pointerlockchange", () => {
     if (!wantTeam) setBotCount(mp ? 0 : parseInt($("botCount").value));
   }
   if (playing && !player.initialised) { player.initialised = true; if (!round.active) respawnPlayer(); switchWeapon(0); gunMeshes[0].visible = true; updateHud(); }
+  lockBusy = false;
   if (!playing) {
+    restoreCursor();
+    if (document.pointerLockElement) document.exitPointerLock();
     showTab("play");
     mouseDown = false; for (const k in keys) keys[k] = false; if (matchOverT <= 0) showBoard(false);
     if (net.ws) { netDisconnect(); if (!$("note").className) setNote("You left the match. Click Play to rejoin."); }
@@ -2874,7 +2928,7 @@ addEventListener("wheel", e => {
   switchWeapon((player.weapon + (e.deltaY > 0 ? 1 : -1) + WEAPONS.length) % WEAPONS.length);
 });
 addEventListener("keydown", e => {
-  if (e.code === "Space" || e.code === "Tab") e.preventDefault();
+  if (e.code === "Space" || e.code === "Tab" || (playing && LOCK_KEYS.includes(e.code))) e.preventDefault();
   if (e.code === "Tab" && playing) showBoard(true);
   keys[e.code] = true;
   if (!playing) return;
