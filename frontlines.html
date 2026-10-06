@@ -1,0 +1,1537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Frontlines</title>
+<style>
+:root{
+  --panel:rgba(12,18,30,.88);--line:rgba(255,255,255,.12);--text:#e8eef7;--muted:#93a1b5;
+  --accent:#4fb3ff;--gold:#ffcc4d;--bad:#ff6b6b;--good:#5bd97a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b1622;color:var(--text);
+  font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none}
+#cv{position:fixed;inset:0;touch-action:none;cursor:crosshair;display:block}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+
+/* menu */
+#menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:radial-gradient(ellipse at center,rgba(8,14,24,.35),rgba(8,14,24,.8))}
+#menu .card{width:min(440px,100%);padding:22px 22px 18px;max-height:100%;overflow:auto}
+#menu h1{margin:0;font-size:34px;letter-spacing:.14em;font-weight:900;
+  background:linear-gradient(90deg,#7fd0ff,#ffd56b);-webkit-background-clip:text;background-clip:text;color:transparent}
+#menu .sub{color:var(--muted);margin:2px 0 16px}
+.row{display:flex;align-items:center;gap:10px;margin:9px 0}
+.row label{width:105px;color:var(--muted);flex:none}
+.row input[type=text],.row select{flex:1;min-width:0;background:#0d1828;border:1px solid var(--line);color:var(--text);
+  border-radius:7px;padding:7px 9px;font:inherit}
+.row input[type=range]{flex:1;min-width:0}
+.seg{display:flex;flex:1;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;background:#0d1828;border:0;padding:7px 4px;color:var(--muted)}
+.seg button.on{background:#1d3a5c;color:#fff}
+.big{width:100%;margin-top:14px;padding:12px;border:0;border-radius:9px;font-weight:800;letter-spacing:.08em;font-size:16px;
+  background:linear-gradient(180deg,#4fb3ff,#2a7fd4);color:#fff;box-shadow:0 4px 14px rgba(40,130,220,.4)}
+.big:hover{filter:brightness(1.1)}
+details{margin-top:12px;color:var(--muted);font-size:13px}
+details summary{cursor:pointer;color:var(--text)}
+details ul{padding-left:18px;margin:8px 0}
+details li{margin:3px 0}
+.foot{margin-top:10px;font-size:12px;color:var(--muted);text-align:center}
+.foot a{color:var(--accent)}
+
+/* hud */
+#lb{position:fixed;left:10px;top:10px;width:248px;padding:8px 10px;font-size:12.5px}
+#lb h3{margin:0 0 5px;font-size:11px;letter-spacing:.12em;color:var(--muted);display:flex;justify-content:space-between;cursor:pointer}
+#lb table{width:100%;border-collapse:collapse}
+#lb td{padding:2px 3px;white-space:nowrap}
+#lb td.n{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+#lb td.r{text-align:right;color:var(--muted)}
+#lb tr.me td{color:#fff;font-weight:700}
+#lb tr.dead td{opacity:.4;text-decoration:line-through}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+#lb.min table{display:none}
+
+#topbar{position:fixed;left:50%;top:10px;transform:translateX(-50%);padding:7px 14px;font-weight:600;white-space:nowrap;text-align:center}
+#topbar.spawn{border-color:#ffcc4d;color:#ffe08a}
+#ctrls{position:fixed;right:10px;top:10px;display:flex;gap:4px;padding:4px}
+#ctrls button{background:#13213a;border:1px solid var(--line);border-radius:6px;padding:5px 9px;min-width:34px}
+#ctrls button.on{background:#2a5a8c;border-color:#4fb3ff}
+
+#feed{position:fixed;right:10px;top:56px;width:290px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.msg{pointer-events:auto;padding:8px 10px;font-size:13px;border-left:3px solid var(--accent);animation:pop .2s ease-out}
+.msg.bad{border-left-color:var(--bad)}.msg.good{border-left-color:var(--good)}.msg.gold{border-left-color:var(--gold)}
+.msg .acts{display:flex;gap:6px;margin-top:6px}
+.msg .acts button{flex:1;border:0;border-radius:6px;padding:5px;background:#24456b}
+.msg .acts button.yes{background:#2c7a45}
+@keyframes pop{from{transform:translateX(20px);opacity:0}}
+
+#bottom{position:fixed;left:10px;right:10px;bottom:10px;display:flex;gap:10px;align-items:flex-end;pointer-events:none}
+#bottom>*{pointer-events:auto}
+#stats{width:300px;padding:10px 12px;flex:none}
+.bar{height:7px;background:#0b1424;border-radius:4px;overflow:hidden;margin:3px 0 7px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#3d8bd9,#7fd0ff);width:0}
+.kv{display:flex;justify-content:space-between;font-size:13px}
+.kv b{font-variant-numeric:tabular-nums}
+.gold{color:var(--gold)}
+.sl{margin-top:7px;font-size:12px;color:var(--muted)}
+.sl div{display:flex;justify-content:space-between}
+.sl input{width:100%;margin:2px 0 0}
+#chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-height:74px;overflow:auto}
+.chip{font-size:11.5px;padding:2px 4px 2px 7px;border-radius:10px;background:#1b2c45;display:flex;align-items:center;gap:4px}
+.chip.in{background:#4a1d24}
+.chip button{border:0;background:rgba(255,255,255,.12);border-radius:8px;padding:0 5px;font-size:11px}
+
+#build{flex:1;display:flex;gap:6px;padding:6px;overflow-x:auto;justify-content:center;min-width:0}
+.bb{position:relative;flex:none;width:76px;background:#13213a;border:1px solid var(--line);border-radius:8px;padding:5px 3px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px}
+.bb canvas{width:30px;height:30px}
+.bb .c{color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums}
+.bb kbd{position:absolute;top:2px;left:4px;font-size:9px;color:var(--muted);font-family:inherit}
+.bb.on{border-color:#ffcc4d;background:#33301a}
+.bb.no{opacity:.45}
+.bb:hover{border-color:#4fb3ff}
+
+#ctx{position:fixed;min-width:200px;padding:6px;z-index:5}
+#ctx .h{padding:4px 6px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+#ctx .h b{display:block;font-size:14px}
+#ctx .h span{font-size:12px;color:var(--muted)}
+#ctx button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:5px 6px}
+#ctx button:hover:not(:disabled){background:#1d3350}
+#ctx button:disabled{opacity:.4;cursor:default}
+#ctx button img{width:20px;height:20px}
+#ctx button .c{margin-left:auto;color:var(--gold);font-size:12px}
+
+#tip{position:fixed;pointer-events:none;padding:5px 8px;font-size:12px;z-index:4;white-space:nowrap}
+#toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);padding:7px 14px;border-radius:8px;
+  background:rgba(120,30,30,.92);font-weight:600;pointer-events:none;transition:opacity .3s;opacity:0}
+#toast.show{opacity:1}
+#toast.ok{background:rgba(30,100,60,.92)}
+
+#over{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,10,18,.55);z-index:10}
+#over .card{padding:26px 30px;text-align:center;width:min(380px,92vw)}
+#over h2{margin:0 0 6px;font-size:30px;letter-spacing:.08em}
+#over p{color:var(--muted);margin:4px 0 16px}
+#over .btns{display:flex;gap:8px}
+#over .btns button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#1b2c45;font-weight:700}
+
+@media (max-width:820px){
+  #lb{width:180px;font-size:11px}
+  #lb td.n{max-width:80px}
+  #feed{width:220px}
+  #bottom{flex-direction:column;align-items:stretch}
+  #stats{width:auto}
+  #build{justify-content:flex-start}
+  .bb{width:64px}
+  #topbar{top:auto;bottom:auto;top:54px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="menu">
+  <div class="card panel">
+    <h1>FRONTLINES</h1>
+    <div class="sub">Conquer the world. Build cities, harbors and fleets.</div>
+    <div class="row"><label>Name</label><input id="mName" type="text" maxlength="16" placeholder="Your nation"></div>
+    <div class="row"><label>Map</label><div class="seg" id="mMap">
+      <button data-v="continents" class="on">Continents</button><button data-v="archipelago">Islands</button><button data-v="pangaea">Pangaea</button></div></div>
+    <div class="row"><label>Size</label><div class="seg" id="mSize">
+      <button data-v="small">Small</button><button data-v="medium" class="on">Medium</button><button data-v="large">Large</button></div></div>
+    <div class="row"><label>Difficulty</label><div class="seg" id="mDiff">
+      <button data-v="easy">Easy</button><button data-v="medium" class="on">Medium</button><button data-v="hard">Hard</button></div></div>
+    <div class="row"><label>Nations <b id="mBotsV">24</b></label><input id="mBots" type="range" min="4" max="60" value="24"></div>
+    <div class="row"><label>Seed</label><input id="mSeed" type="text" placeholder="random"></div>
+    <button class="big" id="mPlay">PLAY</button>
+    <details>
+      <summary>How to play</summary>
+      <ul>
+        <li><b>Pick a start:</b> click any land during the countdown.</li>
+        <li><b>Left click</b> neutral land or an enemy to attack with the <i>Attack size</i> share of your troops. If you can't reach them by land, a boat goes instead.</li>
+        <li><b>Right click</b> (long-press on touch) for the action menu: build, send boats, alliances and nukes.</li>
+        <li><b>Troops vs workers:</b> troops fight and defend, workers earn gold. Population grows toward a cap that rises with land and cities.</li>
+        <li><b>Buildings</b> (keys 1–8): City +max population · Port: trade ships and warships · Defense Post: holds the line · Missile Silo: nukes · SAM: shoots down nukes.</li>
+        <li>Mountains and hills are harder to take. Hold <b>80%</b> of the land to win.</li>
+        <li>Drag to pan, wheel or pinch to zoom, WASD/arrows to move, Space to find home, P to pause.</li>
+      </ul>
+    </details>
+    <div class="foot"><a href="index.html">← Back to Block Strike</a></div>
+  </div>
+</div>
+
+<div id="hud" hidden>
+  <div id="lb" class="panel"><h3 id="lbH"><span>LEADERBOARD</span><span id="lbT">▾</span></h3><table id="lbT2"></table></div>
+  <div id="topbar" class="panel"></div>
+  <div id="ctrls" class="panel">
+    <button data-s="0" title="Pause (P)">❚❚</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button>
+    <button id="cHome" title="Find home (Space)">⌂</button><button id="cQuit" title="Main menu">✕</button>
+  </div>
+  <div id="feed"></div>
+  <div id="bottom">
+    <div id="stats" class="panel">
+      <div class="kv"><span>Population</span><b id="sPop">0</b></div>
+      <div class="bar"><i id="sBar"></i></div>
+      <div class="kv"><span>Troops</span><b id="sTroops">0</b></div>
+      <div class="kv"><span>Workers</span><b id="sWork">0</b></div>
+      <div class="kv"><span>Gold</span><b class="gold" id="sGold">0</b></div>
+      <div class="sl"><div><span>Troops / workers</span><span id="sRatioV">60%</span></div><input id="sRatio" type="range" min="10" max="95" value="60"></div>
+      <div class="sl"><div><span>Attack size</span><span id="sAttV">30%</span></div><input id="sAtt" type="range" min="5" max="100" value="30"></div>
+      <div id="chips"></div>
+    </div>
+    <div id="build" class="panel"></div>
+  </div>
+  <div id="ctx" class="panel" hidden></div>
+  <div id="tip" class="panel" hidden></div>
+  <div id="toast"></div>
+  <div id="over" hidden><div class="card panel"><h2 id="oT"></h2><p id="oP"></p>
+    <div class="btns"><button id="oWatch">Keep watching</button><button id="oMenu">Main menu</button></div></div></div>
+</div>
+
+<script>
+'use strict';
+// ============================================================ constants
+const TPS = 10;
+const TERR_COST = [0, 1, 1.45, 2.1];          // water, plains, highlands, mountains
+const DEF_R = 10, DEF_R2 = DEF_R * DEF_R;
+const SAM_R = 45, SAM_R2 = SAM_R * SAM_R;
+const WS_R2 = 9 * 9;
+const NUKE_R = { atom: 10, hydrogen: 24 };
+const SPAWN_TICKS = 100;
+const WIN_SHARE = 0.8;
+const SIZES = { small: [360, 225], medium: [520, 325], large: [720, 450] };
+const MAPTYPES = {
+  continents:  { freq: 3.0, land: 0.42, edge: 0.22, warp: 1.1 },
+  archipelago: { freq: 6.5, land: 0.32, edge: 0.12, warp: 0.7 },
+  pangaea:     { freq: 2.4, land: 0.50, edge: 0.18, warp: 0.9, radial: 0.35 },
+};
+const BUILD = {
+  city:     { name: 'City',          base: 1000,  mult: 2,   key: '1', desc: '+4k max population' },
+  port:     { name: 'Port',          base: 800,   mult: 2,   key: '2', desc: 'Sends trade ships, builds warships. Coast only' },
+  defense:  { name: 'Defense Post',  base: 400,   mult: 1.5, key: '3', desc: 'Land within 10 tiles is far harder to take' },
+  silo:     { name: 'Missile Silo',  base: 6000,  mult: 1.6, key: '4', desc: 'Launches nukes' },
+  sam:      { name: 'SAM Launcher',  base: 3000,  mult: 1.5, key: '5', desc: 'Shoots down nukes aimed within 45 tiles' },
+  warship:  { name: 'Warship',       base: 1500,  mult: 1.3, key: '6', desc: 'Sinks enemy boats, captures trade. Needs a port' },
+  atom:     { name: 'Atom Bomb',     base: 4000,  mult: 1,   key: '7', desc: 'Blast radius 10. Needs a silo' },
+  hydrogen: { name: 'Hydrogen Bomb', base: 15000, mult: 1,   key: '8', desc: 'Blast radius 24. Needs a silo' },
+};
+const BUILD_TYPES = Object.keys(BUILD);
+const DIFFS = {
+  easy:   { need: 1.9, ready: 0.75, build: 0.25, nukes: false, nukeChance: 0,    gold: 0.8,  growth: 0.85, aggr: 0.6, humanBias: -0.4, betray: false, think: 22 },
+  medium: { need: 1.3, ready: 0.6,  build: 0.5,  nukes: true,  nukeChance: 0.04, gold: 1,    growth: 1,    aggr: 1,   humanBias: 0,    betray: false, think: 15 },
+  hard:   { need: 0.95, ready: 0.5, build: 0.8,  nukes: true,  nukeChance: 0.15, gold: 1.25, growth: 1.1,  aggr: 1.4, humanBias: 0.3,  betray: true,  think: 10 },
+};
+
+// ============================================================ rng / noise
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function makeNoise(rng) {
+  const g = new Float32Array(65536); for (let i = 0; i < g.length; i++) g[i] = rng();
+  return function (x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const x0 = xi & 255, y0 = yi & 255, x1 = (x0 + 1) & 255, y1 = (y0 + 1) & 255;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = g[y0 * 256 + x0], b = g[y0 * 256 + x1], c = g[y1 * 256 + x0], d = g[y1 * 256 + x1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+}
+function fbm(n, x, y, oct) { let s = 0, a = 1, f = 1, t = 0; for (let o = 0; o < oct; o++) { s += a * n(x * f, y * f); t += a; a *= 0.5; f *= 2.03; } return s / t; }
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function hsl(h, s, l) { s /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)]; }
+const pack = (r, g, b) => (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+function mixc(c, r, g, b, t) { const cr = c & 255, cg = (c >> 8) & 255, cb = (c >> 16) & 255; return pack(cr + (r - cr) * t, cg + (g - cg) * t, cb + (b - cb) * t); }
+function fmt(n) { n = Math.max(0, n); if (n < 1000) return String(Math.floor(n)); if (n < 1e6) return (n / 1000).toFixed(n < 1e4 ? 1 : 0) + 'k'; return (n / 1e6).toFixed(n < 1e7 ? 2 : 1) + 'M'; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ============================================================ world state
+let W = 0, H = 0, N = 0;
+let terrain, shade, coast, baseCol, owner, fallout, distT, stamp, bfsSeen, bfsPrev, bfsQ;
+let stampGen = 0, bfsGen = 0;
+let landTotal = 0, coastTiles = [], spawnTiles = [];
+let players = [null], ME = 0, attacks = [], boats = [], structures = [], structMap = new Map(), nukes = [], effects = [];
+let falloutSet = new Set(), tradeCache = new Map(), pending = [];
+let tick = 0, phase = 'none', spawnLeft = 0, speed = 1, demo = false, diff = DIFFS.medium, R = Math.random;
+let gameOverShown = false, nextId = 1, structDirty = false, settings = null;
+const mapCanvas = document.createElement('canvas'), mapCtx = mapCanvas.getContext('2d');
+let img, pix, dMinX, dMinY, dMaxX, dMaxY;
+
+const NB = new Int32Array(4);
+function nb4(i) { let c = 0; const x = i % W; if (x > 0) NB[c++] = i - 1; if (x < W - 1) NB[c++] = i + 1; if (i >= W) NB[c++] = i - W; if (i < N - W) NB[c++] = i + W; return c; }
+function ownN(i, p) { let c = 0; const x = i % W; if (x > 0 && owner[i - 1] === p) c++; if (x < W - 1 && owner[i + 1] === p) c++; if (i >= W && owner[i - W] === p) c++; if (i < N - W && owner[i + W] === p) c++; return c; }
+function touchesOwner(i, p) { return ownN(i, p) > 0; }
+function waterNbrs(i, out) { const k = nb4(i); for (let j = 0; j < k; j++) if (!terrain[NB[j]]) out.push(NB[j]); return out; }
+
+// ============================================================ map generation
+function genMap(type, seed) {
+  const cfg = MAPTYPES[type];
+  const rng = mulberry32(seed);
+  const n1 = makeNoise(rng), n2 = makeNoise(rng), n3 = makeNoise(rng), n4 = makeNoise(rng);
+  N = W * H;
+  const h = new Float32Array(N), sc = cfg.freq / W;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const nx = x * sc, ny = y * sc;
+    const wx = nx + cfg.warp * (fbm(n2, nx * 0.8 + 11.3, ny * 0.8 + 3.1, 3) - 0.5);
+    const wy = ny + cfg.warp * (fbm(n3, nx * 0.8 + 7.7, ny * 0.8 + 19.9, 3) - 0.5);
+    let v = fbm(n1, wx, wy, 6);
+    const e = Math.min(Math.min(x, W - 1 - x) / (W * 0.5), Math.min(y, H - 1 - y) / (H * 0.5));
+    v -= (1 - smooth(0, cfg.edge, e)) * 0.45;
+    if (cfg.radial) { const dx = (x / W - 0.5) * 2, dy = (y / H - 0.5) * 2; v -= (dx * dx + dy * dy) * cfg.radial; }
+    h[y * W + x] = v;
+  }
+  const sample = []; for (let i = 0; i < N; i += 5) sample.push(h[i]); sample.sort((a, b) => a - b);
+  const sea = sample[Math.floor(sample.length * (1 - cfg.land))], top = sample[sample.length - 1];
+  terrain = new Uint8Array(N); shade = new Float32Array(N);
+  const el = new Float32Array(N), landE = [];
+  for (let i = 0; i < N; i++) if (h[i] > sea) {
+    const x = i % W, y = (i / W) | 0;
+    const r = 1 - Math.abs(fbm(n4, x * sc * 2.2, y * sc * 2.2, 4) * 2 - 1);
+    const e = ((h[i] - sea) / (top - sea)) * 0.6 + r * r * 0.4;
+    el[i] = e; terrain[i] = 1; if ((i & 3) === 0) landE.push(e);
+  }
+  landE.sort((a, b) => a - b);
+  const q = p => landE[Math.floor(landE.length * p)] || 1;
+  const t1 = q(0.56), t2 = q(0.86), lo = q(0), hi = landE[landE.length - 1] || 1;
+  for (let i = 0; i < N; i++) if (terrain[i]) {
+    const e = el[i];
+    if (e < t1) { terrain[i] = 1; shade[i] = (e - lo) / (t1 - lo); }
+    else if (e < t2) { terrain[i] = 2; shade[i] = (e - t1) / (t2 - t1); }
+    else { terrain[i] = 3; shade[i] = Math.min(1, (e - t2) / (hi - t2)); }
+  }
+  // drop specks of land, fill puddles
+  const comp = new Int32Array(N).fill(-1), qq = new Int32Array(N);
+  spawnTiles = [];
+  for (let s = 0; s < N; s++) {
+    if (comp[s] !== -1) continue;
+    const isL = terrain[s] > 0; let hd = 0, tl = 0; qq[tl++] = s; comp[s] = s;
+    while (hd < tl) { const c = qq[hd++]; const k = nb4(c); for (let j = 0; j < k; j++) { const n = NB[j]; if (comp[n] === -1 && (terrain[n] > 0) === isL) { comp[n] = s; qq[tl++] = n; } } }
+    if (isL && tl < 16) for (let j = 0; j < tl; j++) terrain[qq[j]] = 0;
+    else if (!isL && tl < 12) for (let j = 0; j < tl; j++) { terrain[qq[j]] = 1; shade[qq[j]] = 0.5; }
+    else if (isL && tl >= 150) for (let j = 0; j < tl; j++) spawnTiles.push(qq[j]);
+  }
+  // coast + water depth
+  coast = new Uint8Array(N); coastTiles = []; landTotal = 0;
+  const depth = new Uint8Array(N).fill(255); let hd = 0, tl = 0;
+  for (let i = 0; i < N; i++) {
+    const k = nb4(i);
+    if (terrain[i]) {
+      landTotal++;
+      for (let j = 0; j < k; j++) if (!terrain[NB[j]]) { coast[i] = 1; coastTiles.push(i); break; }
+    } else {
+      for (let j = 0; j < k; j++) if (terrain[NB[j]]) { depth[i] = 0; qq[tl++] = i; break; }
+    }
+  }
+  while (hd < tl) { const c = qq[hd++]; if (depth[c] >= 20) continue; const k = nb4(c); for (let j = 0; j < k; j++) { const n = NB[j]; if (!terrain[n] && depth[n] === 255) { depth[n] = depth[c] + 1; qq[tl++] = n; } } }
+  // colors
+  baseCol = new Uint32Array(N);
+  for (let i = 0; i < N; i++) {
+    const jit = (((Math.imul(i, 2654435761) >>> 0) / 4294967296) - 0.5) * 7;
+    const t = terrain[i];
+    let r, g, b;
+    if (!t) { const k = Math.min(depth[i], 20) / 20; r = lerp(80, 18, k); g = lerp(152, 54, k); b = lerp(196, 108, k); }
+    else {
+      const k = shade[i];
+      if (t === 1) { r = lerp(112, 150, k); g = lerp(168, 178, k); b = lerp(88, 100, k); }
+      else if (t === 2) { r = lerp(178, 152, k); g = lerp(168, 134, k); b = lerp(112, 98, k); }
+      else { r = lerp(140, 238, k); g = lerp(134, 238, k); b = lerp(130, 242, k); }
+      const x = i % W;
+      if (x > 0 && i >= W) { const d = (t + shade[i] * 0.9) - (terrain[i - W - 1] + shade[i - W - 1] * 0.9); const s = clamp(d * 26, -22, 22); r += s; g += s; b += s; }
+      r += jit; g += jit; b += jit;
+    }
+    baseCol[i] = pack(clamp(r, 0, 255), clamp(g, 0, 255), clamp(b, 0, 255));
+  }
+}
+
+// ============================================================ painting
+function resetDirty() { dMinX = W; dMinY = H; dMaxX = -1; dMaxY = -1; }
+function paint(i) {
+  let c = baseCol[i];
+  if (terrain[i]) {
+    const o = owner[i];
+    if (o) { const P = players[o]; c = P.border.has(i) ? P.bcol : mixc(c, P.r, P.g, P.b, 0.55); }
+    const f = fallout[i]; if (f) c = mixc(c, 130, 230, 60, f / 255 * 0.6);
+  }
+  pix[i] = c;
+  const x = i % W, y = (i / W) | 0;
+  if (x < dMinX) dMinX = x; if (x > dMaxX) dMaxX = x; if (y < dMinY) dMinY = y; if (y > dMaxY) dMaxY = y;
+}
+function updBorder(i) {
+  const o = owner[i];
+  if (o && terrain[i]) {
+    const x = i % W; let b = false;
+    if (x > 0 && terrain[i - 1] && owner[i - 1] !== o) b = true;
+    else if (x < W - 1 && terrain[i + 1] && owner[i + 1] !== o) b = true;
+    else if (i >= W && terrain[i - W] && owner[i - W] !== o) b = true;
+    else if (i < N - W && terrain[i + W] && owner[i + W] !== o) b = true;
+    const B = players[o].border; if (b) B.add(i); else B.delete(i);
+  }
+  paint(i);
+}
+function setOwner(i, p) {
+  const o = owner[i]; if (o === p) return;
+  if (o) { const P = players[o]; P.tiles--; P.border.delete(i); }
+  owner[i] = p; if (p) players[p].tiles++;
+  const S = structMap.get(i);
+  if (S) {
+    if (p) {
+      if (ME && (S.owner === ME || p === ME) && S.owner !== p) feed(p === ME ? `Captured a ${BUILD[S.type].name} from ${players[S.owner].name}` : `${players[p].name} captured your ${BUILD[S.type].name}`, p === ME ? 'good' : 'bad');
+      S.owner = p;
+    } else { S.dead = true; structMap.delete(i); structDirty = true; }
+  }
+  updBorder(i);
+  const x = i % W;
+  if (x > 0) updBorder(i - 1); if (x < W - 1) updBorder(i + 1); if (i >= W) updBorder(i - W); if (i < N - W) updBorder(i + W);
+}
+
+// ============================================================ players
+const SYL_A = ['Ar', 'Bel', 'Cor', 'Dra', 'El', 'Fen', 'Gal', 'Hal', 'Is', 'Jor', 'Kal', 'Lor', 'Mar', 'Nor', 'Or', 'Pel', 'Quin', 'Ros', 'Sar', 'Tal', 'Ul', 'Val', 'Wes', 'Xan', 'Yor', 'Zan', 'Ath', 'Bry', 'Cael', 'Dun', 'Eri', 'Mor', 'Tir', 'Ves'];
+const SYL_B = ['a', 'e', 'i', 'o', 'u', 'ar', 'en', 'is', 'or', 'an', 'el', 'ir', ''];
+const SYL_C = ['dia', 'land', 'mark', 'heim', 'stan', 'ria', 'via', 'gard', 'mont', 'burg', 'nia', 'thal', 'vale', 'port', 'more', 'wick', 'grad', 'esh'];
+function nationName(used) {
+  for (let k = 0; k < 50; k++) {
+    const n = SYL_A[(R() * SYL_A.length) | 0] + SYL_B[(R() * SYL_B.length) | 0] + SYL_C[(R() * SYL_C.length) | 0];
+    if (!used.has(n) && n.length <= 13) { used.add(n); return n; }
+  }
+  return 'Nation ' + used.size;
+}
+function makePlayer(name, isBot, rgb) {
+  const id = players.length, [r, g, b] = rgb;
+  const P = {
+    id, name, isBot, r, g, b, css: `rgb(${r},${g},${b})`, bcol: pack(r * 0.62, g * 0.62, b * 0.62),
+    alive: true, spawned: false, tiles: 0, pop: 2500, maxPop: 2500, gold: 150,
+    ratio: isBot ? 0.55 + R() * 0.2 : 0.6, attackRatio: 0.3,
+    border: new Set(), allies: new Set(), rel: new Map(), lastReq: new Map(), lastWarn: new Map(),
+    traitorUntil: 0, cnt: {}, defPosts: [], think: (R() * 20) | 0, lx: 0, ly: 0, ld: 0,
+    boatCD: 0, noCoastUntil: 0, tradeCount: 0, transportCount: 0, spawnTile: -1,
+  };
+  for (const t of BUILD_TYPES) P.cnt[t] = 0;
+  players.push(P); return P;
+}
+const troopsOf = P => P.pop * P.ratio;
+function maxPop(P) { return Math.round(2 * (Math.pow(P.tiles, 0.6) * 100 + 1000) + P.cnt.city * 4000); }
+const getRel = (A, id) => A.rel.get(id) || 0;
+function addRel(A, id, d) { if (A && A.isBot) A.rel.set(id, clamp(getRel(A, id) + d, -100, 100)); }
+
+function claimSpawn(t, p) {
+  const P = players[p], x0 = t % W, y0 = (t / W) | 0;
+  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+    if (dx * dx + dy * dy > 17) continue;
+    const x = x0 + dx, y = y0 + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const i = y * W + x; if (terrain[i] && !owner[i]) setOwner(i, p);
+  }
+  P.spawned = true; P.spawnTile = t; P.lx = x0; P.ly = y0; P.ld = 3;
+}
+function releaseSpawn(p) { for (let i = 0; i < N; i++) if (owner[i] === p) setOwner(i, 0); players[p].spawned = false; }
+function randomSpawn(p) {
+  const minD0 = Math.sqrt(landTotal / (players.length + 1)) * 0.9;
+  const spawned = players.filter(P => P && P.spawned && P.id !== p);
+  for (let md = minD0; md > 2; md *= 0.85) {
+    for (let k = 0; k < 60; k++) {
+      const t = spawnTiles[(R() * spawnTiles.length) | 0]; if (t === undefined || owner[t]) continue;
+      const x = t % W, y = (t / W) | 0; let ok = true;
+      for (const Q of spawned) { const dx = (Q.spawnTile % W) - x, dy = ((Q.spawnTile / W) | 0) - y; if (dx * dx + dy * dy < md * md) { ok = false; break; } }
+      if (ok) { claimSpawn(t, p); return true; }
+    }
+  }
+  return false;
+}
+
+// ============================================================ structures
+function cost(P, type) { const B = BUILD[type]; return Math.round(B.base * Math.pow(B.mult, Math.min(P.cnt[type] || 0, 6))); }
+function readySilo(P) { return structures.some(S => !S.dead && S.owner === P.id && S.type === 'silo' && S.cd <= tick); }
+function nearestStruct(P, type, t) {
+  const x = t % W, y = (t / W) | 0; let best = null, bd = 1e18;
+  for (const S of structures) if (!S.dead && S.owner === P.id && S.type === type) { const d = (S.x - x) ** 2 + (S.y - y) ** 2; if (d < bd) { bd = d; best = S; } }
+  return best;
+}
+function placeCheck(P, type, t) {
+  const no = why => ({ ok: false, why });
+  if (t < 0) return no('Off the map');
+  const c = cost(P, type);
+  if (type === 'atom' || type === 'hydrogen') {
+    if (!P.cnt.silo) return no('Build a Missile Silo first');
+    if (!readySilo(P)) return no('Silos are reloading');
+    if (P.gold < c) return no('Not enough gold');
+    return { ok: true, tile: t };
+  }
+  if (type === 'warship') {
+    if (!P.cnt.port) return no('Build a Port first');
+    if (P.gold < c) return no('Not enough gold');
+    const port = nearestStruct(P, 'port', t); if (!port) return no('Build a Port first');
+    return { ok: true, tile: port.tile };
+  }
+  if (P.gold < c) return no('Not enough gold');
+  if (owner[t] !== P.id || !terrain[t]) return no('Build on your own land');
+  if (type === 'port' && !coast[t]) {
+    const x0 = t % W, y0 = (t / W) | 0; let best = -1, bd = 99;
+    for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) {
+      const x = x0 + dx, y = y0 + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const i = y * W + x; if (coast[i] && owner[i] === P.id && dx * dx + dy * dy < bd) { bd = dx * dx + dy * dy; best = i; }
+    }
+    if (best < 0) return no('Ports go on your coast');
+    t = best;
+  }
+  const x = t % W, y = (t / W) | 0;
+  for (const S of structures) if (!S.dead && Math.abs(S.x - x) <= 3 && Math.abs(S.y - y) <= 3) return no('Too close to another building');
+  return { ok: true, tile: t };
+}
+function doBuild(P, type, t) {
+  if (type === 'atom' || type === 'hydrogen') return launchNuke(P.id, type, t);
+  P.gold -= cost(P, type);
+  if (type === 'warship') { spawnWarship(P.id, structMap.get(t)); P.cnt.warship++; return null; }
+  const S = { id: nextId++, type, owner: P.id, tile: t, x: t % W, y: (t / W) | 0, cd: 0, next: tick + 50 + R() * 150, dead: false, water: -1 };
+  if (type === 'port') S.water = waterNbrs(t, [])[0];
+  structures.push(S); structMap.set(t, S); P.cnt[type]++;
+  return null;
+}
+function recount() {
+  for (let p = 1; p < players.length; p++) { const P = players[p]; for (const t of BUILD_TYPES) P.cnt[t] = 0; P.defPosts.length = 0; P.tradeCount = 0; P.transportCount = 0; }
+  if (structDirty) { structures = structures.filter(S => !S.dead); structDirty = false; }
+  for (const S of structures) { const P = players[S.owner]; P.cnt[S.type]++; if (S.type === 'defense') P.defPosts.push(S); }
+  for (const b of boats) if (!b.dead) { const P = players[b.owner]; if (b.type === 'warship') P.cnt.warship++; else if (b.type === 'trade') P.tradeCount++; else P.transportCount++; }
+}
+
+// ============================================================ attacks
+const cand = [], scr = [], ord = [];
+function orderAttack(p, to, frac) {
+  const P = players[p]; const tr = troopsOf(P) * frac; if (tr < 1) return 0;
+  P.pop -= tr; launchAttack(p, to, tr); return tr;
+}
+function launchAttack(p, to, tr) {
+  const P = players[p];
+  if (to) {
+    const T = players[to];
+    if (P.allies.has(to)) { P.pop += tr; return; }
+    for (const a of attacks) {
+      if (!a.dead && a.from === to && a.to === p) {
+        const m = Math.min(a.troops, tr); a.troops -= m; tr -= m;
+        if (a.troops < 1) { a.dead = true; T.pop += a.troops; a.troops = 0; }
+      }
+    }
+    onAttacked(T, P);
+  }
+  if (tr < 1) return;
+  for (const a of attacks) if (!a.dead && a.from === p && a.to === to) { a.troops += tr; return; }
+  attacks.push({ from: p, to, troops: tr, dead: false });
+}
+function onAttacked(T, P) {
+  addRel(T, P.id, -6);
+  if (T.id === ME) {
+    const lw = T.lastWarn.get(P.id) || -999;
+    if (tick - lw > 100) { T.lastWarn.set(P.id, tick); feed(`⚔ ${esc(P.name)} is attacking you`, 'bad'); }
+  }
+}
+function bordersOwner(P, o) {
+  for (const b of P.border) { const k = nb4(b); for (let j = 0; j < k; j++) if (owner[NB[j]] === o && terrain[NB[j]]) return true; }
+  return false;
+}
+function stepAttack(a) {
+  const P = players[a.from];
+  if (!P.alive) { a.dead = true; return; }
+  const T = a.to ? players[a.to] : null;
+  if (T && (!T.alive || P.allies.has(a.to))) { P.pop += a.troops; a.dead = true; return; }
+  stampGen++; cand.length = 0;
+  for (const b of P.border) {
+    const k = nb4(b);
+    for (let j = 0; j < k; j++) { const n = NB[j]; if (owner[n] === a.to && terrain[n] && stamp[n] !== stampGen) { stamp[n] = stampGen; cand.push(n); } }
+  }
+  const L = cand.length;
+  if (!L) { P.pop += a.troops; a.dead = true; return; }
+  let defT = 0, dens = 0, defs = null;
+  if (T) { defT = troopsOf(T); dens = defT / Math.max(1, T.tiles); defs = T.defPosts; }
+  let K;
+  if (!T) K = Math.ceil(L * 0.1) + 1;
+  else { const adv = clamp(a.troops / (defT * 0.5 + 20), 0.25, 3); K = Math.ceil(L * 0.045 * adv) + 1; }
+  if (K > L) K = L;
+  scr.length = L; ord.length = L;
+  for (let j = 0; j < L; j++) { const i = cand[j]; scr[j] = ownN(i, a.from) + R() * 1.8 - (terrain[i] - 1) * 0.5; ord[j] = j; }
+  if (K < L) ord.sort((u, v) => scr[v] - scr[u]);
+  const traitorF = T && tick < T.traitorUntil ? 0.6 : 1;
+  const sizeF = 1.2 + P.tiles / 700;
+  for (let k = 0; k < K; k++) {
+    const i = cand[ord[k]];
+    let c = TERR_COST[terrain[i]]; if (fallout[i]) c *= 1.6;
+    let defended = false;
+    if (T) {
+      if (defs.length) { const x = i % W, y = (i / W) | 0; for (const d of defs) { const dx = d.x - x, dy = d.y - y; if (dx * dx + dy * dy <= DEF_R2) { defended = true; break; } } }
+      c *= (3 + dens * 1.6) * traitorF * (defended ? 2.2 : 1);
+      if (defended && R() < 0.5) continue;
+    } else c *= sizeF;
+    if (a.troops < c) { P.pop += a.troops; a.troops = 0; a.dead = true; break; }
+    a.troops -= c;
+    if (T) T.pop = Math.max(0, T.pop - dens * (defended ? 0.3 : 0.6));
+    setOwner(i, a.from);
+  }
+}
+
+// ============================================================ boats
+const D8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+function waterBFS(src, goal, maxN) {
+  bfsGen++; let h = 0, t = 0;
+  for (const s of src) if (bfsSeen[s] !== bfsGen) { bfsSeen[s] = bfsGen; bfsPrev[s] = -1; bfsQ[t++] = s; }
+  while (h < t) {
+    const c = bfsQ[h++];
+    if (goal(c)) { const path = []; let k = c; while (k !== -1) { path.push(k); k = bfsPrev[k]; } return path; }
+    if (t >= maxN) continue;
+    const x = c % W, y = (c / W) | 0;
+    for (let d = 0; d < 8; d++) {
+      const nx = x + D8[d][0], ny = y + D8[d][1];
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const n = ny * W + nx;
+      if (terrain[n] || bfsSeen[n] === bfsGen) continue;
+      if (d >= 4 && (terrain[y * W + nx] || terrain[ny * W + x])) continue;
+      bfsSeen[n] = bfsGen; bfsPrev[n] = c; bfsQ[t++] = n;
+    }
+  }
+  return null;
+}
+function findLanding(t, p) {
+  if (t < 0 || !terrain[t]) return -1;
+  const o = owner[t]; if (o === p) return -1;
+  if (coast[t]) return t;
+  bfsGen++; let h = 0, tl = 0; bfsQ[tl++] = t; bfsSeen[t] = bfsGen;
+  while (h < tl && tl < 8000) {
+    const c = bfsQ[h++]; if (coast[c]) return c;
+    const k = nb4(c);
+    for (let j = 0; j < k; j++) { const n = NB[j]; if (bfsSeen[n] !== bfsGen && terrain[n] && owner[n] === o) { bfsSeen[n] = bfsGen; bfsQ[tl++] = n; } }
+  }
+  return -1;
+}
+function setBoatPos(b) {
+  const L = b.path.length, k = Math.min(L - 1, b.pos | 0), f = b.pos - k;
+  const a = b.path[k], c = b.path[Math.min(k + 1, L - 1)];
+  const ax = a % W + 0.5, ay = ((a / W) | 0) + 0.5, cx = c % W + 0.5, cy = ((c / W) | 0) + 0.5;
+  b.px = b.x; b.py = b.y;
+  b.x = ax + (cx - ax) * f; b.y = ay + (cy - ay) * f;
+  if (a !== c) b.dir = Math.atan2(cy - ay, cx - ax);
+}
+function addBoat(b) { const t = b.path[0]; b.x = b.px = t % W + 0.5; b.y = b.py = ((t / W) | 0) + 0.5; b.dir = 0; b.dead = false; b.pos = 0; boats.push(b); return b; }
+function orderBoat(p, t, frac) {
+  const P = players[p];
+  if (P.transportCount >= 3) return 'You already have 3 boats at sea';
+  const L = findLanding(t, p); if (L < 0) return 'No beach to land on there';
+  const o = owner[L]; if (o && P.allies.has(o)) return 'That is an ally';
+  const path = waterBFS(waterNbrs(L, []), c => touchesOwner(c, p), N);
+  if (!path) return 'No sea route from your coast';
+  const tr = troopsOf(P) * frac; if (tr < 5) return 'Not enough troops';
+  P.pop -= tr; P.transportCount++;
+  addBoat({ type: 'transport', owner: p, troops: tr, path, dest: L, speed: 1.4 });
+  if (o === ME) feed(`⚓ A boat from ${esc(P.name)} is heading for your coast`, 'bad');
+  return null;
+}
+function landBoat(b) {
+  const P = players[b.owner], L = b.dest, o = owner[L];
+  if (o === b.owner || (o && P.allies.has(o))) { P.pop += b.troops; return; }
+  const T = o ? players[o] : null;
+  const c = TERR_COST[terrain[L]] * (T ? 3 + troopsOf(T) / Math.max(1, T.tiles) * 1.6 : 1.5);
+  if (b.troops <= c) { if (o === ME) feed(`Repelled a landing by ${esc(P.name)}`, 'good'); return; }
+  b.troops -= c; setOwner(L, b.owner); launchAttack(b.owner, o, b.troops);
+  if (o === ME) feed(`${esc(P.name)} landed troops on your coast!`, 'bad');
+}
+function spawnTrade(S) {
+  const P = players[S.owner];
+  if (P.tradeCount >= 8 || S.water < 0) return;
+  const opts = []; let tw = 0;
+  for (const D of structures) {
+    if (D.dead || D.type !== 'port' || D.owner === S.owner || D.water < 0) continue;
+    if (atWar(S.owner, D.owner)) continue;
+    const w = P.allies.has(D.owner) ? 3 : 1; opts.push([D, w]); tw += w;
+  }
+  if (!opts.length) return;
+  let r = R() * tw, D = opts[0][0];
+  for (const [d, w] of opts) { r -= w; if (r <= 0) { D = d; break; } }
+  const key = S.id + '>' + D.id;
+  let path = tradeCache.get(key);
+  if (path === undefined) { path = waterBFS([D.water], c => c === S.water, N); tradeCache.set(key, path); }
+  if (!path || path.length < 4) return;
+  P.tradeCount++;
+  addBoat({ type: 'trade', owner: S.owner, src: S, dst: D, path, speed: 1.1, value: Math.round(20 + path.length * 0.5) });
+}
+function atWar(a, b) { for (const x of attacks) if (!x.dead && ((x.from === a && x.to === b) || (x.from === b && x.to === a))) return true; return false; }
+function spawnWarship(p, port) {
+  if (!port || port.water < 0) return;
+  addBoat({ type: 'warship', owner: p, home: port, hp: 1000, path: [port.water], speed: 0.7, cd: 0 });
+}
+function newPatrol(b) {
+  let home = b.home;
+  if (!home || home.dead || home.owner !== b.owner) { home = b.home = nearestStruct(players[b.owner], 'port', b.path[Math.round(b.pos)]); if (!home) return; }
+  const cur = b.path[Math.min(b.path.length - 1, Math.round(b.pos))];
+  for (let k = 0; k < 8; k++) {
+    const x = home.x + Math.round((R() * 2 - 1) * 24), y = home.y + Math.round((R() * 2 - 1) * 24);
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const t = y * W + x; if (terrain[t]) continue;
+    const path = waterBFS([cur], c => c === t, 5000);
+    if (path && path.length > 1) { path.reverse(); b.path = path; b.pos = 0; return; }
+  }
+}
+function warshipStep(b) {
+  if (b.cd > 0) b.cd--;
+  const P = players[b.owner];
+  let best = null, bd = WS_R2;
+  for (const o of boats) {
+    if (o === b || o.dead || o.owner === b.owner || P.allies.has(o.owner)) continue;
+    const dx = o.x - b.x, dy = o.y - b.y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = o; }
+  }
+  if (best && b.cd <= 0) {
+    b.cd = 8;
+    effects.push({ kind: 'shot', x: b.x, y: b.y, x2: best.x, y2: best.y, t: 0, dur: 250 });
+    if (best.type === 'transport') {
+      best.dead = true; effects.push({ kind: 'boom', x: best.x, y: best.y, r: 1.5, t: 0, dur: 500 });
+      if (best.owner === ME) feed(`${esc(P.name)}'s warship sank your boat`, 'bad');
+      else if (b.owner === ME) feed(`Your warship sank a ${esc(players[best.owner].name)} boat`, 'good');
+    } else if (best.type === 'trade') {
+      best.dead = true; P.gold += best.value;
+      if (b.owner === ME) feed(`Captured a trade ship: +${fmt(best.value)} gold`, 'gold');
+      else if (best.owner === ME) feed(`${esc(P.name)} captured your trade ship`, 'bad');
+    } else {
+      best.hp -= 200;
+      if (best.hp <= 0) { best.dead = true; effects.push({ kind: 'boom', x: best.x, y: best.y, r: 3, t: 0, dur: 700 }); if (best.owner === ME) feed(`Your warship was sunk by ${esc(P.name)}`, 'bad'); }
+    }
+  }
+  if (b.pos >= b.path.length - 1) { if (R() < 0.06) newPatrol(b); }
+  else b.pos = Math.min(b.path.length - 1, b.pos + b.speed);
+  setBoatPos(b);
+}
+function stepBoats() {
+  for (const b of boats) {
+    if (b.dead) continue;
+    const P = players[b.owner];
+    if (!P.alive) { b.dead = true; continue; }
+    if (b.type === 'warship') { warshipStep(b); continue; }
+    b.pos += b.speed;
+    if (b.pos >= b.path.length - 1) {
+      b.dead = true;
+      if (b.type === 'transport') landBoat(b);
+      else if (!b.dst.dead) {
+        players[b.dst.owner].gold += b.value; P.gold += b.value;
+        if (b.owner === ME || b.dst.owner === ME) effects.push({ kind: 'text', x: b.dst.x + 0.5, y: b.dst.y, text: '+' + fmt(b.value), color: '#ffd84d', t: 0, dur: 1400 });
+      }
+      continue;
+    }
+    setBoatPos(b);
+  }
+  if (boats.some(b => b.dead)) boats = boats.filter(b => !b.dead);
+}
+
+// ============================================================ nukes
+function launchNuke(p, type, t) {
+  const P = players[p], c = cost(P, type);
+  if (P.gold < c) return 'Not enough gold';
+  const tx = t % W + 0.5, ty = ((t / W) | 0) + 0.5;
+  let silo = null, bd = 1e18;
+  for (const S of structures) if (!S.dead && S.owner === p && S.type === 'silo' && S.cd <= tick) { const d = (S.x + 0.5 - tx) ** 2 + (S.y + 0.5 - ty) ** 2; if (d < bd) { bd = d; silo = S; } }
+  if (!silo) return 'No silo ready';
+  P.gold -= c; silo.cd = tick + 60;
+  const dist = Math.sqrt(bd);
+  let sam = null;
+  for (const S of structures) {
+    if (S.dead || S.type !== 'sam' || S.owner === p || players[S.owner].allies.has(p) || S.cd > tick) continue;
+    if ((S.x + 0.5 - tx) ** 2 + (S.y + 0.5 - ty) ** 2 <= SAM_R2) { sam = S; break; }
+  }
+  if (sam) sam.cd = tick + 150;
+  nukes.push({ owner: p, type, sx: silo.x + 0.5, sy: silo.y + 0.5, tx, ty, t: 0, pt: 0, dur: Math.max(25, dist / 2.2), dist, icp: sam ? 0.78 : 0, sam, dead: false });
+  const v = owner[t];
+  if (v && v !== p) {
+    const V = players[v];
+    if (V.allies.has(p)) breakAlliance(p, v);
+    addRel(V, p, -60); onAttacked(V, P);
+    if (v === ME) feed(`☢ ${esc(P.name)} launched a ${BUILD[type].name} at you!`, 'bad');
+  }
+  for (let q = 1; q < players.length; q++) if (q !== p) addRel(players[q], p, -10);
+  return null;
+}
+function stepNukes() {
+  for (const n of nukes) {
+    n.pt = n.t; n.t += 1 / n.dur;
+    if (n.icp && n.t >= n.icp) {
+      n.dead = true;
+      const [x, y] = nukePos(n, n.t);
+      effects.push({ kind: 'boom', x, y, r: 3, t: 0, dur: 600 });
+      if (!n.sam.dead) effects.push({ kind: 'shot', x: n.sam.x + 0.5, y: n.sam.y + 0.5, x2: x, y2: y, t: 0, dur: 400 });
+      if (n.owner === ME) feed('Your nuke was shot down by a SAM', 'bad');
+      else if (n.sam.owner === ME) feed('Your SAM shot down an incoming nuke', 'good');
+    } else if (n.t >= 1) { n.dead = true; detonate(n.tx, n.ty, NUKE_R[n.type]); }
+  }
+  if (nukes.some(n => n.dead)) nukes = nukes.filter(n => !n.dead);
+}
+function nukePos(n, t) { return [lerp(n.sx, n.tx, t), lerp(n.sy, n.ty, t) - Math.sin(Math.PI * t) * n.dist * 0.3]; }
+function detonate(x, y, r) {
+  const lost = new Map(), r2 = r * r;
+  for (let yy = Math.floor(y - r); yy <= Math.ceil(y + r); yy++) for (let xx = Math.floor(x - r); xx <= Math.ceil(x + r); xx++) {
+    if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+    const dx = xx + 0.5 - x, dy = yy + 0.5 - y, d2 = dx * dx + dy * dy; if (d2 > r2) continue;
+    const i = yy * W + xx; if (!terrain[i]) continue;
+    const d = Math.sqrt(d2) / r;
+    const f = Math.round(255 * (1 - d * 0.7)); if (f > fallout[i]) { fallout[i] = f; falloutSet.add(i); }
+    const S = structMap.get(i); if (S) { S.dead = true; structMap.delete(i); structDirty = true; }
+    const o = owner[i];
+    if (o && R() < (d < 0.55 ? 1 : 1 - (d - 0.55) / 0.45)) { lost.set(o, (lost.get(o) || 0) + 1); setOwner(i, 0); }
+    else paint(i);
+  }
+  for (const b of boats) if ((b.x - x) ** 2 + (b.y - y) ** 2 <= r2) b.dead = true;
+  for (const [o, c] of lost) { const P = players[o]; P.pop *= Math.max(0.15, 1 - (c / (P.tiles + c)) * 1.8); }
+  effects.push({ kind: 'boom', x, y, r, t: 0, dur: 1600, nuke: true });
+}
+
+// ============================================================ diplomacy
+function makeAlliance(a, b) {
+  const A = players[a], B = players[b];
+  A.allies.add(b); B.allies.add(a);
+  for (const x of attacks) if (!x.dead && ((x.from === a && x.to === b) || (x.from === b && x.to === a))) { players[x.from].pop += x.troops; x.dead = true; }
+  addRel(A, b, 20); addRel(B, a, 20);
+  if (a === ME || b === ME) feed(`Alliance formed with ${esc((a === ME ? B : A).name)}`, 'good');
+}
+function breakAlliance(a, b) {
+  const A = players[a], B = players[b];
+  if (!A.allies.has(b)) return;
+  A.allies.delete(b); B.allies.delete(a);
+  A.traitorUntil = tick + 300;
+  for (let q = 1; q < players.length; q++) if (q !== a) addRel(players[q], a, q === b ? -50 : -12);
+  if (b === ME) feed(`${esc(A.name)} betrayed your alliance!`, 'bad');
+  else if (a === ME) feed(`You broke the alliance with ${esc(B.name)}. Others will trust you less.`, 'bad');
+}
+function botAccepts(B, a) {
+  const A = players[a];
+  if (B.allies.size >= 3 || tick < A.traitorUntil) return false;
+  const s = (A.pop + 1) / (B.pop + 1);
+  const score = getRel(B, a) / 40 + (s > 1.3 ? 0.6 : 0) + (s < 0.5 ? -0.4 : 0) + (atWar(a, B.id) ? -0.6 : 0) + (R() - 0.5) * 0.6;
+  return score > 0.15;
+}
+function requestAlliance(a, b) {
+  const A = players[a], B = players[b];
+  if (!B.alive || B.allies.has(a)) return;
+  if (B.isBot) {
+    const last = B.lastReq.get(a);
+    if (a === ME && last !== undefined && tick - last < 300) { toast(`${B.name} needs time before you ask again`); return; }
+    B.lastReq.set(a, tick);
+    if (botAccepts(B, a)) makeAlliance(a, b);
+    else if (a === ME) feed(`${esc(B.name)} declined your alliance`, '');
+  } else {
+    if (pending.some(r => r.from === a)) return;
+    const r = { from: a, expire: tick + 200, el: null };
+    pending.push(r);
+    r.el = feed(`<b style="color:${A.css}">${esc(A.name)}</b> asks for an alliance`, '', [
+      ['Accept', 'yes', () => { if (A.alive) makeAlliance(a, ME); dropReq(r); }],
+      ['Decline', '', () => { addRel(A, ME, -5); dropReq(r); }],
+    ], 20000);
+  }
+}
+function dropReq(r) { pending = pending.filter(x => x !== r); if (r.el) r.el.remove(); }
+
+// ============================================================ bots
+function botThink(B) {
+  const D = demo ? DIFFS.medium : diff;
+  const tr = troopsOf(B), maxT = B.maxPop * B.ratio;
+  const nbc = new Map();
+  for (const b of B.border) { const k = nb4(b); for (let j = 0; j < k; j++) { const n = NB[j]; if (!terrain[n]) continue; const o = owner[n]; if (o !== B.id) nbc.set(o, (nbc.get(o) || 0) + 1); } }
+  const hasNeutral = nbc.has(0);
+  let neutralAtt = null; for (const a of attacks) if (!a.dead && a.from === B.id && a.to === 0) neutralAtt = a;
+  if (hasNeutral && tr > maxT * 0.18 && (!neutralAtt || neutralAtt.troops < tr * 0.15)) orderAttack(B.id, 0, 0.3 + R() * 0.2);
+
+  const enemies = []; for (const o of nbc.keys()) if (o && !B.allies.has(o)) enemies.push(o);
+  if (enemies.length && R() < (hasNeutral ? 0.12 : 0.6) * D.aggr && tr > maxT * D.ready) {
+    let best = 0, bs = -1e9;
+    for (const o of enemies) {
+      const T = players[o];
+      const s = tr / (troopsOf(T) + 1) - getRel(B, o) / 60 + (o === ME ? D.humanBias : 0) + (tick < T.traitorUntil ? 0.5 : 0) + nbc.get(o) / 400 + R() * 0.3;
+      if (s > bs) { bs = s; best = o; }
+    }
+    const tt = troopsOf(players[best]);
+    if (tr * 0.5 > tt * 0.35 * D.need || (getRel(B, best) < -40 && tr > tt * 0.4)) orderAttack(B.id, best, 0.4 + R() * 0.2);
+  }
+  if (!hasNeutral && tick > B.boatCD && B.transportCount < 1 && tr > maxT * 0.55 && R() < (enemies.length ? 0.08 : 0.35) * D.aggr) botBoat(B);
+  if (R() < D.build) botBuild(B, enemies, D);
+  if (D.nukes && B.cnt.silo && R() < D.nukeChance) botNuke(B, enemies);
+
+  if (R() < 0.03) {
+    for (const o of nbc.keys()) {
+      if (!o || B.allies.has(o) || B.allies.size >= 3) continue;
+      const T = players[o], rel = getRel(B, o);
+      if (o === ME) {
+        if (!demo && rel >= -5 && T.pop > B.pop * 1.2 && !atWar(B.id, o) && tick - (B.lastReq.get(o) ?? -1e9) > 900) { B.lastReq.set(o, tick); requestAlliance(B.id, o); break; }
+      } else if (T.isBot && rel > -5 && !atWar(B.id, o) && R() < 0.3) { requestAlliance(B.id, o); break; }
+    }
+  }
+  if (D.betray && !hasNeutral && !enemies.length && B.allies.size && R() < 0.005) {
+    const o = [...B.allies][(R() * B.allies.size) | 0];
+    if (bordersOwner(B, o) && troopsOf(players[o]) < tr * 0.4) { breakAlliance(B.id, o); orderAttack(B.id, o, 0.5); }
+  }
+}
+function botBoat(B) {
+  B.boatCD = tick + 100 + R() * 150;
+  let best = -1, bs = -1e9;
+  for (let k = 0; k < 40; k++) {
+    const c = coastTiles[(R() * coastTiles.length) | 0], o = owner[c];
+    if (o === B.id || (o && B.allies.has(o))) continue;
+    const dx = (c % W) - B.lx, dy = ((c / W) | 0) - B.ly, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > W * 0.4) continue;
+    const s = (o ? troopsOf(B) / (troopsOf(players[o]) + 1) - 1 : 1.2) - d / (W * 0.3) + R() * 0.3;
+    if (s > bs) { bs = s; best = c; }
+  }
+  if (best >= 0) orderBoat(B.id, best, 0.35);
+}
+function botBuild(B, enemies, D) {
+  let want;
+  const enemySilo = D.nukes && structures.some(S => S.type === 'silo' && S.owner !== B.id && !B.allies.has(S.owner));
+  if (!B.cnt.port && tick > B.noCoastUntil && R() < 0.6) want = 'port';
+  else if (B.cnt.city < 1 + ((B.tiles / 500) | 0) && R() < 0.55) want = 'city';
+  else if (D.nukes && B.tiles > 1500 && !B.cnt.silo && R() < 0.25) want = 'silo';
+  else if (enemySilo && B.tiles > 1000 && B.cnt.sam < 1 + ((B.tiles / 3000) | 0) && R() < 0.4) want = 'sam';
+  else if (enemies.length && B.cnt.defense < ((B.tiles / 450) | 0) && R() < 0.35) want = 'defense';
+  else if (B.cnt.port && B.cnt.warship < 1 + ((B.tiles / 3500) | 0) && R() < 0.25) want = 'warship';
+  else want = 'city';
+  if (B.gold < cost(B, want)) return;
+  let t = -1;
+  if (want === 'port') {
+    const mine = coastTiles.filter(c => owner[c] === B.id);
+    for (let k = 0; k < 30 && mine.length; k++) { const c = mine[(R() * mine.length) | 0]; if (placeCheck(B, 'port', c).ok) { t = c; break; } }
+    if (t < 0) { B.noCoastUntil = tick + 400; return; }
+  } else if (want === 'warship') {
+    t = nearestStruct(B, 'port', B.ly * W + B.lx)?.tile ?? -1;
+  } else if (want === 'defense') {
+    const arr = [...B.border], es = new Set(enemies);
+    for (let k = 0; k < 30 && arr.length; k++) {
+      const c = arr[(R() * arr.length) | 0], n = nb4(c); let front = false;
+      for (let j = 0; j < n; j++) if (es.has(owner[NB[j]])) front = true;
+      if (front && placeCheck(B, 'defense', c).ok) { t = c; break; }
+    }
+  } else {
+    const r = Math.max(2, B.ld * 1.6);
+    for (let k = 0; k < 40; k++) {
+      const x = Math.round(B.lx + (R() * 2 - 1) * r), y = Math.round(B.ly + (R() * 2 - 1) * r);
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const c = y * W + x; if (placeCheck(B, want, c).ok) { t = c; break; }
+    }
+  }
+  if (t < 0) return;
+  const res = placeCheck(B, want, t);
+  if (res.ok) doBuild(B, want, res.tile);
+}
+function botNuke(B, enemies) {
+  if (B.gold < cost(B, 'atom') * 1.3 || !readySilo(B)) return;
+  let pool = enemies.map(o => players[o]);
+  if (!pool.length || R() < 0.3) pool = players.filter(P => P && P.alive && P !== B && !B.allies.has(P.id) && P.tiles > B.tiles * 0.5);
+  if (!pool.length) return;
+  let T = pool[0]; for (const P of pool) if (P.tiles > T.tiles) T = P;
+  const cities = structures.filter(S => !S.dead && S.owner === T.id && (S.type === 'city' || S.type === 'silo'));
+  const t = cities.length ? cities[(R() * cities.length) | 0].tile : T.ly * W + T.lx;
+  const type = B.gold >= cost(B, 'hydrogen') * 1.2 ? 'hydrogen' : 'atom';
+  if (placeCheck(B, type, t).ok) doBuild(B, type, t);
+}
+
+// ============================================================ labels
+const labD = [], labI = [];
+function computeLabels() {
+  const P = players.length;
+  for (let p = 0; p < P; p++) { labD[p] = 0; labI[p] = -1; }
+  for (let i = 0; i < N; i++) {
+    const o = owner[i]; if (!o) { distT[i] = 0; continue; }
+    const x = i % W;
+    let d = x > 0 && owner[i - 1] === o ? distT[i - 1] + 1 : 1;
+    const u = i >= W && owner[i - W] === o ? distT[i - W] + 1 : 1; if (u < d) d = u;
+    distT[i] = d;
+  }
+  for (let i = N - 1; i >= 0; i--) {
+    const o = owner[i]; if (!o) continue;
+    const x = i % W; let d = distT[i];
+    const r = x < W - 1 && owner[i + 1] === o ? distT[i + 1] + 1 : 1; if (r < d) d = r;
+    const b = i < N - W && owner[i + W] === o ? distT[i + W] + 1 : 1; if (b < d) d = b;
+    distT[i] = d;
+    if (d > labD[o]) { labD[o] = d; labI[o] = i; }
+  }
+  for (let p = 1; p < P; p++) { const Q = players[p]; if (labI[p] >= 0) { Q.lx = labI[p] % W; Q.ly = (labI[p] / W) | 0; Q.ld = labD[p]; } }
+}
+
+// ============================================================ tick
+function step() {
+  tick++;
+  if (phase === 'spawn') {
+    if (--spawnLeft <= 0) startPlay();
+    if (tick % 5 === 0) computeLabels();
+    return;
+  }
+  recount();
+  for (let p = 1; p < players.length; p++) {
+    const P = players[p]; if (!P.alive) continue;
+    const D = P.isBot ? (demo ? DIFFS.medium : diff) : null;
+    const mp = P.maxPop = maxPop(P);
+    if (P.pop < mp) P.pop += (10 + Math.pow(P.pop, 0.73) / 2) * (1 - P.pop / mp) / TPS * (D ? D.growth : 1);
+    else P.pop -= (P.pop - mp) * 0.01;
+    P.gold += (P.pop * (1 - P.ratio) * 0.02 + 1) / TPS * (D ? D.gold : 1);
+  }
+  for (const a of attacks) if (!a.dead) stepAttack(a);
+  if (attacks.some(a => a.dead)) attacks = attacks.filter(a => !a.dead);
+  stepBoats();
+  for (const S of structures) if (!S.dead && S.type === 'port' && tick >= S.next) { S.next = tick + 120 + R() * 200; spawnTrade(S); }
+  stepNukes();
+  if (tick % 5 === 0) for (const i of falloutSet) { const f = fallout[i] - 2; fallout[i] = f > 0 ? f : 0; paint(i); if (f <= 0) falloutSet.delete(i); }
+  for (let p = 1; p < players.length; p++) {
+    const P = players[p]; if (!P.alive || !P.isBot) continue;
+    if (--P.think <= 0) { P.think = (demo ? 14 : diff.think) + ((R() * 8) | 0); botThink(P); }
+  }
+  if (tick % 10 === 0) {
+    for (let p = 1; p < players.length; p++) {
+      const P = players[p]; if (!P.isBot) continue;
+      for (const [k, v] of P.rel) P.rel.set(k, v * 0.995 + (P.allies.has(k) ? 0.1 : 0));
+    }
+    computeLabels();
+    for (const r of pending.slice()) if (tick > r.expire || !players[r.from].alive) dropReq(r);
+  }
+  for (let p = 1; p < players.length; p++) {
+    const P = players[p];
+    if (P.alive && P.tiles === 0) eliminate(P);
+  }
+  if (tick % 10 === 5) checkEnd();
+}
+function eliminate(P) {
+  P.alive = false; P.pop = 0;
+  for (const q of P.allies) players[q].allies.delete(P.id);
+  P.allies.clear();
+  for (const b of boats) if (b.owner === P.id) b.dead = true;
+  if (ME && P.id !== ME) feed(`${esc(P.name)} was eliminated`, '');
+  if (P.id === ME) showOver(false);
+}
+function checkEnd() {
+  let alive = 0, lead = null;
+  for (let p = 1; p < players.length; p++) { const P = players[p]; if (!P.alive) continue; alive++; if (!lead || P.tiles > lead.tiles) lead = P; }
+  if (demo) { if (alive <= 1 || (lead && lead.tiles >= landTotal * WIN_SHARE)) startDemo(); return; }
+  if (gameOverShown || !lead) return;
+  if (lead.tiles >= landTotal * WIN_SHARE || alive === 1) showOver(lead.id === ME, lead);
+}
+function startPlay() {
+  phase = 'play';
+  for (let p = 1; p < players.length; p++) if (!players[p].spawned) randomSpawn(p);
+  computeLabels();
+  if (ME) {
+    const P = players[ME];
+    cam.x = P.lx + 0.5; cam.y = P.ly + 0.5; cam.z = clamp(fitZoom() * 3, cam.z, 14);
+    feed('Click neutral land to expand. Right-click for buildings and diplomacy.', 'good', null, 9000);
+  }
+}
+
+// ============================================================ setup
+function allocWorld() {
+  owner = new Uint16Array(N); fallout = new Uint8Array(N); distT = new Uint16Array(N); stamp = new Int32Array(N);
+  bfsSeen = new Int32Array(N); bfsPrev = new Int32Array(N); bfsQ = new Int32Array(N);
+  stampGen = 0; bfsGen = 0;
+  mapCanvas.width = W; mapCanvas.height = H;
+  img = mapCtx.createImageData(W, H); pix = new Uint32Array(img.data.buffer);
+  pix.set(baseCol); mapCtx.putImageData(img, 0, 0); resetDirty();
+  players = [null]; attacks = []; boats = []; structures = []; structMap = new Map(); nukes = []; effects = [];
+  falloutSet = new Set(); tradeCache = new Map(); pending = [];
+  tick = 0; gameOverShown = false; nextId = 1; structDirty = false; placeMode = null;
+}
+function addBots(n, used) {
+  for (let k = 0; k < n; k++) {
+    let h = ((players.length - 1) * 137.508 + 20) % 360;
+    if (!demo && Math.abs(h - 22) < 18) h += 36;
+    const P = makePlayer(nationName(used), true, hsl(h, 55 + R() * 20, 46 + R() * 12));
+    randomSpawn(P.id);
+  }
+}
+function newGame(s) {
+  demo = false; settings = s; diff = DIFFS[s.diff];
+  const seed = s.seed ? hashStr(s.seed) : (Math.random() * 2 ** 32) >>> 0;
+  R = mulberry32(seed ^ 0x9e3779b9);
+  [W, H] = SIZES[s.size];
+  genMap(s.map, seed); allocWorld();
+  const me = makePlayer(s.name || 'You', false, [255, 112, 32]); ME = me.id;
+  addBots(s.bots, new Set([me.name]));
+  computeLabels();
+  phase = 'spawn'; spawnLeft = SPAWN_TICKS;
+  fitCamera(); setSpeed(1);
+  ui.menu.hidden = true; ui.hud.hidden = false; ui.over.hidden = true; ui.feed.innerHTML = '';
+  buildBar();
+}
+function startDemo() {
+  demo = true; ME = 0;
+  const seed = (Math.random() * 2 ** 32) >>> 0;
+  R = mulberry32(seed);
+  [W, H] = SIZES.medium;
+  genMap(['continents', 'archipelago', 'pangaea'][seed % 3], seed); allocWorld();
+  addBots(20, new Set());
+  for (let p = 1; p < players.length; p++) players[p].gold = 2000;
+  phase = 'play'; computeLabels(); fitCamera(); speed = 3;
+}
+
+// ============================================================ camera / input
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let cw = 0, ch = 0, dpr = 1;
+const cam = { x: 0, y: 0, z: 2 };
+function resize() { dpr = Math.min(2, window.devicePixelRatio || 1); cw = innerWidth; ch = innerHeight; cv.width = cw * dpr; cv.height = ch * dpr; }
+addEventListener('resize', resize); resize();
+const fitZoom = () => Math.min(cw / W, ch / H) * 0.96;
+function fitCamera() { cam.x = W / 2; cam.y = H / 2; cam.z = fitZoom(); }
+function clampCam() { cam.z = clamp(cam.z, fitZoom() * 0.7, 40); cam.x = clamp(cam.x, 0, W); cam.y = clamp(cam.y, 0, H); }
+const w2s = (x, y) => [(x - cam.x) * cam.z + cw / 2, (y - cam.y) * cam.z + ch / 2];
+const s2w = (sx, sy) => [(sx - cw / 2) / cam.z + cam.x, (sy - ch / 2) / cam.z + cam.y];
+function tileAt(sx, sy) { const [x, y] = s2w(sx, sy); const tx = Math.floor(x), ty = Math.floor(y); return tx < 0 || ty < 0 || tx >= W || ty >= H ? -1 : ty * W + tx; }
+function zoomAt(sx, sy, f) { const [wx, wy] = s2w(sx, sy); cam.z *= f; clampCam(); cam.x = wx - (sx - cw / 2) / cam.z; cam.y = wy - (sy - ch / 2) / cam.z; clampCam(); }
+
+const ptrs = new Map(); let drag = null, pinch = null, longT = 0;
+const mouse = { x: -1, y: -1, in: false };
+let placeMode = null, shiftDown = false;
+cv.addEventListener('pointerdown', e => {
+  if (demo) return;
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  hideCtx();
+  if (ptrs.size === 1) {
+    drag = { sx: e.clientX, sy: e.clientY, cx: cam.x, cy: cam.y, moved: false, btn: e.button, cancel: false };
+    if (e.pointerType === 'touch') { clearTimeout(longT); longT = setTimeout(() => { if (drag && !drag.moved) { drag.cancel = true; openCtx(drag.sx, drag.sy); } }, 480); }
+  } else if (ptrs.size === 2) {
+    clearTimeout(longT); if (drag) drag.cancel = true;
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
+});
+cv.addEventListener('pointermove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY; mouse.in = true;
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d); pinch.d = d; return;
+  }
+  if (drag) {
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; clearTimeout(longT); }
+    if (drag.moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); }
+  }
+});
+function endPtr(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId); clearTimeout(longT);
+  if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (drag && !drag.moved && !drag.cancel && e.type === 'pointerup') {
+    if (drag.btn === 0) onClick(e.clientX, e.clientY);
+    else if (drag.btn === 2) { if (placeMode) setPlace(null); else openCtx(e.clientX, e.clientY); }
+  }
+  drag = null;
+}
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('pointerleave', () => { mouse.in = false; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('wheel', e => { e.preventDefault(); if (!demo) { hideCtx(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); } }, { passive: false });
+const keys = new Set();
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+  shiftDown = e.shiftKey;
+  if (demo || phase === 'none') return;
+  keys.add(e.key.toLowerCase());
+  const t = BUILD_TYPES.find(k => BUILD[k].key === e.key);
+  if (t) setPlace(placeMode === t ? null : t);
+  else if (e.key === 'Escape') { setPlace(null); hideCtx(); }
+  else if (e.key === ' ') { e.preventDefault(); goHome(); }
+  else if (e.key === 'p' || e.key === 'P') setSpeed(speed ? 0 : 1);
+  else if (e.key === '+' || e.key === '=') zoomAt(cw / 2, ch / 2, 1.25);
+  else if (e.key === '-') zoomAt(cw / 2, ch / 2, 0.8);
+});
+addEventListener('keyup', e => { keys.delete(e.key.toLowerCase()); shiftDown = e.shiftKey; });
+addEventListener('blur', () => keys.clear());
+function goHome() { if (ME && players[ME].alive) { cam.x = players[ME].lx + 0.5; cam.y = players[ME].ly + 0.5; } }
+
+function onClick(sx, sy) {
+  const t = tileAt(sx, sy); if (t < 0) return;
+  if (phase === 'spawn') {
+    if (!terrain[t]) return;
+    if (owner[t] && owner[t] !== ME) { toast('That land is taken'); return; }
+    releaseSpawn(ME); claimSpawn(t, ME); computeLabels(); return;
+  }
+  const P = players[ME]; if (!P || !P.alive) return;
+  if (placeMode) { if (tryPlace(placeMode, t) && !shiftDown) setPlace(null); return; }
+  if (!terrain[t]) return;
+  const o = owner[t];
+  if (o === ME) return;
+  if (o && P.allies.has(o)) { toast(`${players[o].name} is your ally`); return; }
+  humanAttack(t);
+}
+function humanAttack(t, forceBoat) {
+  const P = players[ME], o = owner[t];
+  if (!forceBoat && bordersOwner(P, o)) {
+    const sent = orderAttack(ME, o, P.attackRatio);
+    if (sent) { const [x, y] = [t % W + 0.5, ((t / W) | 0)]; effects.push({ kind: 'text', x, y, text: '⚔ ' + fmt(sent), color: '#fff', t: 0, dur: 1000 }); }
+    else toast('Not enough troops');
+  } else {
+    const err = orderBoat(ME, t, P.attackRatio);
+    if (err) toast(err); else toast('Boat launched', true);
+  }
+}
+function tryPlace(type, t) {
+  const P = players[ME], r = placeCheck(P, type, t);
+  if (!r.ok) { toast(r.why); return false; }
+  const err = doBuild(P, type, r.tile);
+  if (err) { toast(err); return false; }
+  recount();
+  return true;
+}
+
+// ============================================================ UI
+const $ = id => document.getElementById(id);
+const ui = { menu: $('menu'), hud: $('hud'), over: $('over'), feed: $('feed'), ctx: $('ctx'), tip: $('tip'), top: $('topbar'), build: $('build'), chips: $('chips') };
+let toastT = 0;
+function toast(msg, ok) { const el = $('toast'); el.textContent = msg; el.className = 'show' + (ok ? ' ok' : ''); clearTimeout(toastT); toastT = setTimeout(() => el.className = '', 1800); }
+function feed(html, cls, acts, ms) {
+  if (!ME) return null;
+  const el = document.createElement('div'); el.className = 'msg panel ' + (cls || ''); el.innerHTML = html;
+  if (acts) {
+    const row = document.createElement('div'); row.className = 'acts';
+    for (const [label, c, fn] of acts) { const b = document.createElement('button'); b.textContent = label; b.className = c; b.onclick = fn; row.appendChild(b); }
+    el.appendChild(row);
+  }
+  ui.feed.prepend(el);
+  while (ui.feed.children.length > 7) ui.feed.lastChild.remove();
+  setTimeout(() => el.remove(), ms || 9000);
+  return el;
+}
+
+// icons
+function drawIcon(c, type, x, y, s, fill, alpha) {
+  c.save(); c.translate(x, y); c.globalAlpha = alpha ?? 1;
+  const nuke = type === 'atom' || type === 'hydrogen';
+  c.fillStyle = nuke ? '#7a1f1f' : fill; c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = Math.max(1, s * 0.08);
+  c.beginPath();
+  if (type === 'warship') c.arc(0, 0, s * 0.5, 0, 7);
+  else if (c.roundRect) c.roundRect(-s / 2, -s / 2, s, s, s * 0.22); else c.rect(-s / 2, -s / 2, s, s);
+  c.fill(); c.stroke();
+  const u = s / 10; c.fillStyle = '#fff'; c.strokeStyle = '#fff'; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.beginPath();
+  switch (type) {
+    case 'city': c.rect(-3.4 * u, -0.4 * u, 1.9 * u, 3.6 * u); c.rect(-1 * u, -3.2 * u, 2 * u, 6.4 * u); c.rect(1.5 * u, -1.6 * u, 1.9 * u, 4.8 * u); c.fill(); break;
+    case 'port':
+      c.lineWidth = u * 0.9; c.arc(0, -2.5 * u, 0.9 * u, 0, 7); c.moveTo(0, -1.6 * u); c.lineTo(0, 3.1 * u);
+      c.moveTo(-1.8 * u, -0.5 * u); c.lineTo(1.8 * u, -0.5 * u);
+      c.moveTo(-2.9 * u, 0.9 * u); c.quadraticCurveTo(-2.4 * u, 3.2 * u, 0, 3.2 * u); c.quadraticCurveTo(2.4 * u, 3.2 * u, 2.9 * u, 0.9 * u); c.stroke(); break;
+    case 'defense':
+      c.moveTo(0, -3.4 * u); c.lineTo(2.9 * u, -2.2 * u); c.lineTo(2.5 * u, 0.9 * u); c.quadraticCurveTo(1.6 * u, 2.8 * u, 0, 3.6 * u);
+      c.quadraticCurveTo(-1.6 * u, 2.8 * u, -2.5 * u, 0.9 * u); c.lineTo(-2.9 * u, -2.2 * u); c.closePath(); c.fill(); break;
+    case 'silo':
+      c.moveTo(0, -3.8 * u); c.lineTo(1.3 * u, -1.6 * u); c.lineTo(1.3 * u, 2 * u); c.lineTo(2.3 * u, 3.5 * u); c.lineTo(-2.3 * u, 3.5 * u);
+      c.lineTo(-1.3 * u, 2 * u); c.lineTo(-1.3 * u, -1.6 * u); c.closePath(); c.fill(); break;
+    case 'sam':
+      c.lineWidth = u * 0.8; c.arc(0, 0, 2.7 * u, 0, 7); c.moveTo(-3.6 * u, 0); c.lineTo(3.6 * u, 0); c.moveTo(0, -3.6 * u); c.lineTo(0, 3.6 * u); c.stroke();
+      c.beginPath(); c.arc(0, 0, 1 * u, 0, 7); c.fill(); break;
+    case 'warship':
+      c.moveTo(-3.8 * u, 0.4 * u); c.lineTo(3.8 * u, 0.4 * u); c.lineTo(2.7 * u, 2.6 * u); c.lineTo(-2.7 * u, 2.6 * u); c.closePath();
+      c.rect(-1.8 * u, -1.4 * u, 3.2 * u, 1.9 * u); c.rect(-0.4 * u, -3.4 * u, 0.9 * u, 2.1 * u); c.fill(); break;
+    case 'atom':
+      c.lineWidth = u * 0.6; c.arc(0, 0, 0.9 * u, 0, 7); c.fill();
+      for (let k = 0; k < 3; k++) { c.beginPath(); c.ellipse(0, 0, 3.4 * u, 1.3 * u, k * Math.PI / 3, 0, 7); c.stroke(); }
+      break;
+    case 'hydrogen':
+      c.arc(0, 0, 0.9 * u, 0, 7); c.fill();
+      for (let k = 0; k < 3; k++) { const a = k * 2 * Math.PI / 3 - Math.PI / 2; c.beginPath(); c.moveTo(Math.cos(a - 0.5) * 1.5 * u, Math.sin(a - 0.5) * 1.5 * u); c.arc(0, 0, 3.5 * u, a - 0.5, a + 0.5); c.arc(0, 0, 1.5 * u, a + 0.5, a - 0.5, true); c.fill(); }
+      break;
+  }
+  c.restore();
+}
+const iconURL = {};
+for (const t of BUILD_TYPES) { const c = document.createElement('canvas'); c.width = c.height = 60; drawIcon(c.getContext('2d'), t, 30, 30, 50, '#2a6fb0'); iconURL[t] = c.toDataURL(); }
+
+function buildBar() {
+  ui.build.innerHTML = '';
+  const P = players[ME];
+  for (const t of BUILD_TYPES) {
+    const b = document.createElement('button'); b.className = 'bb'; b.dataset.t = t; b.title = BUILD[t].name + ' — ' + BUILD[t].desc;
+    const c = document.createElement('canvas'); c.width = c.height = 60; drawIcon(c.getContext('2d'), t, 30, 30, 50, P.css);
+    b.innerHTML = `<kbd>${BUILD[t].key}</kbd>`; b.appendChild(c);
+    b.insertAdjacentHTML('beforeend', `<span>${BUILD[t].name.replace(' Launcher', '').replace('Missile ', '')}</span><span class="c"></span>`);
+    b.onclick = () => setPlace(placeMode === t ? null : t);
+    ui.build.appendChild(b);
+  }
+}
+function setPlace(t) {
+  placeMode = phase === 'play' && ME && players[ME].alive ? t : null;
+  for (const b of ui.build.children) b.classList.toggle('on', b.dataset.t === placeMode);
+  if (placeMode) toast(BUILD[placeMode].desc + (placeMode === 'warship' ? ' — click near your port' : ' — click to place'), true);
+}
+function setSpeed(s) { speed = s; for (const b of document.querySelectorAll('#ctrls [data-s]')) b.classList.toggle('on', +b.dataset.s === s); }
+document.querySelectorAll('#ctrls [data-s]').forEach(b => b.onclick = () => setSpeed(+b.dataset.s));
+$('cHome').onclick = goHome;
+$('cQuit').onclick = () => { if (gameOverShown || confirm('Leave this game?')) toMenu(); };
+$('lbH').onclick = () => { $('lb').classList.toggle('min'); $('lbT').textContent = $('lb').classList.contains('min') ? '▸' : '▾'; };
+$('sRatio').oninput = e => { if (ME) players[ME].ratio = e.target.value / 100; };
+$('sAtt').oninput = e => { if (ME) players[ME].attackRatio = e.target.value / 100; };
+$('oWatch').onclick = () => ui.over.hidden = true;
+$('oMenu').onclick = toMenu;
+function toMenu() { ui.hud.hidden = true; ui.over.hidden = true; ui.menu.hidden = false; hideCtx(); startDemo(); }
+
+let ctxTile = -1;
+function hideCtx() { ui.ctx.hidden = true; ctxTile = -1; }
+function openCtx(sx, sy) {
+  if (phase !== 'play' || !ME || !players[ME].alive) return;
+  const t = tileAt(sx, sy); if (t < 0) return;
+  ctxTile = t;
+  const P = players[ME], o = owner[t], land = terrain[t] > 0, O = o ? players[o] : null;
+  let head;
+  if (!land) head = '<b>Ocean</b><span>Open water</span>';
+  else if (!O) head = `<b>Wilderness</b><span>${['', 'Plains', 'Highlands', 'Mountains'][terrain[t]]} · unclaimed</span>`;
+  else {
+    const tags = [o === ME ? 'You' : P.allies.has(o) ? 'Ally' : '', tick < O.traitorUntil ? 'TRAITOR' : '', O.isBot && o !== ME ? relWord(getRel(O, ME)) : ''].filter(Boolean).join(' · ');
+    head = `<b style="color:${O.css}">${esc(O.name)}</b><span>${fmt(troopsOf(O))} troops · ${(O.tiles / landTotal * 100).toFixed(1)}% land${tags ? ' · ' + tags : ''}</span>`;
+  }
+  const items = [];
+  const it = (act, label, opts = {}) => items.push({ act, label, ...opts });
+  if (land && o !== ME && !(o && P.allies.has(o))) {
+    if (bordersOwner(P, o)) it('attack', `Attack with ${fmt(troopsOf(P) * P.attackRatio)}`);
+    it('boat', 'Send boat');
+  }
+  if (O && o !== ME) { if (P.allies.has(o)) it('break', 'Break alliance'); else it('ally', 'Request alliance'); }
+  if (o === ME) for (const k of ['city', 'port', 'defense', 'silo', 'sam']) { const r = placeCheck(P, k, t); it('b:' + k, BUILD[k].name, { icon: k, cost: cost(P, k), dis: !r.ok, why: r.why }); }
+  if (P.cnt.port) { const r = placeCheck(P, 'warship', t); it('b:warship', 'Warship', { icon: 'warship', cost: cost(P, 'warship'), dis: !r.ok, why: r.why }); }
+  if (P.cnt.silo) for (const k of ['atom', 'hydrogen']) { const r = placeCheck(P, k, t); it('b:' + k, BUILD[k].name + ' here', { icon: k, cost: cost(P, k), dis: !r.ok, why: r.why }); }
+  if (!items.length && !land) { hideCtx(); return; }
+  ui.ctx.innerHTML = `<div class="h">${head}</div>` + items.map((x, k) =>
+    `<button data-k="${k}" ${x.dis ? 'disabled' : ''} title="${esc(x.why || '')}">${x.icon ? `<img src="${iconURL[x.icon]}">` : ''}${x.label}${x.cost ? `<span class="c">${fmt(x.cost)}</span>` : ''}</button>`).join('');
+  ui.ctx.querySelectorAll('button').forEach(b => b.onclick = () => { const x = items[+b.dataset.k]; hideCtx(); ctxAction(x.act, t); });
+  ui.ctx.hidden = false;
+  const r = ui.ctx.getBoundingClientRect();
+  ui.ctx.style.left = clamp(sx + 6, 6, cw - r.width - 6) + 'px';
+  ui.ctx.style.top = clamp(sy + 6, 6, ch - r.height - 6) + 'px';
+}
+function relWord(r) { return r > 40 ? 'Friendly' : r > 10 ? 'Warm' : r < -40 ? 'Hostile' : r < -10 ? 'Wary' : 'Neutral'; }
+function ctxAction(act, t) {
+  const o = owner[t];
+  if (act === 'attack') humanAttack(t);
+  else if (act === 'boat') humanAttack(t, true);
+  else if (act === 'ally') requestAlliance(ME, o);
+  else if (act === 'break') { if (confirm(`Break your alliance with ${players[o].name}? Other nations will trust you less.`)) breakAlliance(ME, o); }
+  else if (act.startsWith('b:')) tryPlace(act.slice(2), t);
+}
+
+let frameN = 0, hudN = 0;
+function updateHUD() {
+  if (!ME) return;
+  hudN++;
+  const P = players[ME];
+  if (phase === 'spawn') { ui.top.className = 'panel spawn'; ui.top.textContent = `Click the map to choose your starting land · ${Math.ceil(spawnLeft / TPS)}s`; }
+  else {
+    ui.top.className = 'panel';
+    const s = Math.floor(tick / TPS), mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+    ui.top.textContent = `${mm}:${ss} · You hold ${(P.tiles / landTotal * 100).toFixed(1)}% of the land · goal ${WIN_SHARE * 100}%` + (speed ? '' : ' · PAUSED');
+  }
+  $('sPop').textContent = `${fmt(P.pop)} / ${fmt(P.maxPop)}`;
+  $('sBar').style.width = clamp(P.pop / Math.max(1, P.maxPop) * 100, 0, 100) + '%';
+  $('sTroops').textContent = fmt(troopsOf(P));
+  $('sWork').textContent = fmt(P.pop * (1 - P.ratio));
+  $('sGold').textContent = `${fmt(P.gold)}  (+${fmt(P.pop * (1 - P.ratio) * 0.02 + 1)}/s)`;
+  $('sRatioV').textContent = Math.round(P.ratio * 100) + '% troops';
+  $('sAttV').textContent = Math.round(P.attackRatio * 100) + '% · ' + fmt(troopsOf(P) * P.attackRatio);
+  for (const b of ui.build.children) {
+    const t = b.dataset.t, c = cost(P, t);
+    b.querySelector('.c').textContent = fmt(c);
+    let ok = P.gold >= c;
+    if (t === 'warship') ok = ok && P.cnt.port > 0;
+    if (t === 'atom' || t === 'hydrogen') ok = ok && P.cnt.silo > 0;
+    b.classList.toggle('no', !ok);
+  }
+  if (hudN % 2 === 1) {
+    const mine = attacks.filter(a => !a.dead && a.from === ME), inc = attacks.filter(a => !a.dead && a.to === ME);
+    const sea = boats.filter(b => !b.dead && b.type === 'transport' && b.owner === ME);
+    let h = '';
+    mine.forEach((a, k) => h += `<span class="chip">→ ${a.to ? esc(players[a.to].name) : 'Wilderness'} ${fmt(a.troops)}<button data-r="${k}" title="Retreat (lose 25%)">✕</button></span>`);
+    sea.forEach(b => h += `<span class="chip">⚓ ${fmt(b.troops)}</span>`);
+    inc.forEach(a => h += `<span class="chip in">${esc(players[a.from].name)} ⚔ ${fmt(a.troops)}</span>`);
+    ui.chips.innerHTML = h;
+    ui.chips.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const a = mine[+b.dataset.r]; if (a && !a.dead) { a.dead = true; P.pop += a.troops * 0.75; } });
+  }
+  if (hudN % 7 === 1) {
+    const list = players.filter(Boolean).sort((a, b) => b.tiles - a.tiles);
+    const rows = list.slice(0, 10); if (!rows.includes(P)) rows.push(P);
+    $('lbT2').innerHTML = rows.map(Q => `<tr class="${Q.id === ME ? 'me' : ''} ${Q.alive ? '' : 'dead'}"><td class="r">${list.indexOf(Q) + 1}</td>` +
+      `<td class="n"><span class="sw" style="background:${Q.css}"></span>${esc(Q.name)}${P.allies.has(Q.id) ? ' ◆' : ''}</td>` +
+      `<td class="r">${(Q.tiles / landTotal * 100).toFixed(1)}%</td><td class="r">${fmt(troopsOf(Q))}</td></tr>`).join('');
+  }
+  updateTip();
+}
+function updateTip() {
+  if (!mouse.in || drag?.moved || !ui.ctx.hidden || phase === 'none' || demo) { ui.tip.hidden = true; return; }
+  const t = tileAt(mouse.x, mouse.y);
+  if (t < 0 || !terrain[t]) { ui.tip.hidden = true; return; }
+  const o = owner[t], O = o ? players[o] : null;
+  let h;
+  if (!O) h = `<b>Wilderness</b> · ${['', 'plains', 'highlands', 'mountains'][terrain[t]]}`;
+  else h = `<b style="color:${O.css}">${esc(O.name)}</b> · ${fmt(troopsOf(O))} troops${o !== ME && players[ME]?.allies.has(o) ? ' · ally' : ''}${tick < O.traitorUntil ? ' · <span style="color:#ff6b6b">traitor</span>' : ''}`;
+  const S = structMap.get(t); if (S) h += ` · ${BUILD[S.type].name}`;
+  ui.tip.innerHTML = h; ui.tip.hidden = false;
+  ui.tip.style.left = Math.min(mouse.x + 14, cw - ui.tip.offsetWidth - 6) + 'px';
+  ui.tip.style.top = Math.min(mouse.y + 16, ch - 30) + 'px';
+}
+function showOver(win, lead) {
+  if (gameOverShown) return;
+  gameOverShown = true; placeMode = null;
+  const s = Math.floor(tick / TPS);
+  $('oT').textContent = win ? 'VICTORY' : 'DEFEATED';
+  $('oT').style.color = win ? '#ffd56b' : '#ff6b6b';
+  $('oP').textContent = win ? `You rule ${(players[ME].tiles / landTotal * 100).toFixed(0)}% of the world after ${Math.floor(s / 60)}m ${s % 60}s.`
+    : lead ? `${lead.name} conquered the world.` : `Your nation fell after ${Math.floor(s / 60)}m ${s % 60}s.`;
+  ui.over.hidden = false;
+}
+
+// ============================================================ render
+function render(alpha, dt) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#12365a'; ctx.fillRect(0, 0, cw, ch);
+  if (!W) return;
+  if (dMaxX >= 0) { mapCtx.putImageData(img, 0, 0, dMinX, dMinY, dMaxX - dMinX + 1, dMaxY - dMinY + 1); resetDirty(); }
+  const z = cam.z;
+  ctx.imageSmoothingEnabled = z < 1.5;
+  const [ox, oy] = w2s(0, 0);
+  ctx.drawImage(mapCanvas, ox, oy, W * z, H * z);
+  const [vx0, vy0] = s2w(-30, -30), [vx1, vy1] = s2w(cw + 30, ch + 30);
+  const vis = (x, y) => x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1;
+
+  // range rings while placing
+  const hov = mouse.in ? tileAt(mouse.x, mouse.y) : -1;
+  if (placeMode && ME) {
+    ctx.lineWidth = 1.5;
+    const ring = (x, y, r, col) => { const [sx, sy] = w2s(x, y); ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(sx, sy, r * z, 0, 7); ctx.stroke(); };
+    if (placeMode === 'defense') for (const S of structures) if (S.owner === ME && S.type === 'defense') ring(S.x + 0.5, S.y + 0.5, DEF_R, 'rgba(120,200,255,.5)');
+    if (placeMode === 'sam') for (const S of structures) if (S.owner === ME && S.type === 'sam') ring(S.x + 0.5, S.y + 0.5, SAM_R, 'rgba(120,200,255,.5)');
+    if (placeMode === 'atom' || placeMode === 'hydrogen') for (const S of structures) if (S.type === 'sam' && S.owner !== ME && !players[ME].allies.has(S.owner)) ring(S.x + 0.5, S.y + 0.5, SAM_R, 'rgba(255,90,90,.6)');
+  }
+  // structures
+  const is = clamp(z * 2.6, 7, 24);
+  for (const S of structures) {
+    if (S.dead || !vis(S.x, S.y)) continue;
+    const [sx, sy] = w2s(S.x + 0.5, S.y + 0.5);
+    drawIcon(ctx, S.type, sx, sy, is, players[S.owner].css, (S.type === 'silo' || S.type === 'sam') && S.cd > tick ? 0.55 : 1);
+  }
+  // boats
+  const bs = clamp(z * 1.9, 5, 16);
+  ctx.font = `700 ${clamp(z * 2.2, 9, 13)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  for (const b of boats) {
+    if (b.dead) continue;
+    const x = b.px + (b.x - b.px) * alpha, y = b.py + (b.y - b.py) * alpha;
+    if (!vis(x, y)) continue;
+    const [sx, sy] = w2s(x, y), P = players[b.owner];
+    if (b.type === 'warship') {
+      drawIcon(ctx, 'warship', sx, sy, bs * 1.6, P.css);
+      if (b.hp < 1000) { ctx.fillStyle = '#300'; ctx.fillRect(sx - bs, sy - bs * 1.2, bs * 2, 3); ctx.fillStyle = '#5bd97a'; ctx.fillRect(sx - bs, sy - bs * 1.2, bs * 2 * b.hp / 1000, 3); }
+      continue;
+    }
+    const L = b.type === 'trade' ? bs * 0.8 : bs;
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(b.dir);
+    ctx.beginPath(); ctx.moveTo(L, 0); ctx.lineTo(L * 0.3, -L * 0.45); ctx.lineTo(-L * 0.75, -L * 0.45); ctx.lineTo(-L * 0.75, L * 0.45); ctx.lineTo(L * 0.3, L * 0.45); ctx.closePath();
+    ctx.fillStyle = b.type === 'trade' ? '#f2c94c' : P.css; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = b.type === 'trade' ? P.css : '#fff'; ctx.stroke();
+    ctx.restore();
+    if (b.type === 'transport' && z > 1.6) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeText(fmt(b.troops), sx, sy - L * 0.6); ctx.fillStyle = '#fff'; ctx.fillText(fmt(b.troops), sx, sy - L * 0.6); }
+  }
+  // nukes
+  for (const n of nukes) {
+    const t = n.pt + (n.t - n.pt) * alpha;
+    const [tsx, tsy] = w2s(n.tx, n.ty);
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 120);
+    ctx.strokeStyle = `rgba(255,60,60,${0.4 + 0.4 * pulse})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(tsx, tsy, NUKE_R[n.type] * z, 0, 7); ctx.stroke();
+    ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let k = 0; k <= 24; k++) { const [x, y] = nukePos(n, k / 24), [sx, sy] = w2s(x, y); k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const [x, y] = nukePos(n, t), [sx, sy] = w2s(x, y);
+    ctx.fillStyle = '#ffeb7a'; ctx.beginPath(); ctx.arc(sx, sy, n.type === 'hydrogen' ? 5 : 4, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#ff3b3b'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // effects
+  for (const e of effects) {
+    e.t += dt; const k = e.t / e.dur;
+    const [sx, sy] = w2s(e.x, e.y);
+    if (e.kind === 'boom') {
+      const r = Math.max(4, e.r * z) * (0.4 + 0.8 * Math.sqrt(k));
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+      g.addColorStop(0, `rgba(255,255,220,${(1 - k) * 0.95})`); g.addColorStop(0.4, `rgba(255,170,60,${(1 - k) * 0.8})`); g.addColorStop(1, 'rgba(255,60,20,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7); ctx.fill();
+      if (e.nuke) { ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy, e.r * z * (0.6 + k * 1.2), 0, 7); ctx.stroke(); }
+    } else if (e.kind === 'shot') {
+      const [ex, ey] = w2s(e.x2, e.y2);
+      ctx.strokeStyle = `rgba(255,240,150,${1 - k})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    } else if (e.kind === 'text') {
+      ctx.font = '700 13px system-ui,sans-serif'; ctx.textAlign = 'center';
+      ctx.globalAlpha = 1 - k; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)';
+      ctx.strokeText(e.text, sx, sy - k * 24); ctx.fillStyle = e.color; ctx.fillText(e.text, sx, sy - k * 24); ctx.globalAlpha = 1;
+    }
+  }
+  if (effects.length) effects = effects.filter(e => e.t < e.dur);
+
+  // labels
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  for (let p = 1; p < players.length; p++) {
+    const P = players[p]; if (!P.alive || P.ld < 1) continue;
+    const d = P.ld, wf = Math.min(d * 0.75, (2 * d * 0.92) / (Math.max(3, P.name.length) * 0.6));
+    const fs = Math.min(wf * z, 64); if (fs < 7) continue;
+    const [sx, sy] = w2s(P.lx + 0.5, P.ly + 0.5);
+    if (sx < -200 || sx > cw + 200 || sy < -100 || sy > ch + 100) continue;
+    const ally = ME && P.allies.has(ME);
+    ctx.font = `800 ${fs}px system-ui,sans-serif`; ctx.lineWidth = Math.max(2, fs * 0.16); ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.strokeText(P.name, sx, sy - fs * 0.35); ctx.fillStyle = p === ME ? '#fff' : ally ? '#b6ffc8' : tick < P.traitorUntil ? '#ffb0b0' : '#f2f5fa';
+    ctx.fillText(P.name, sx, sy - fs * 0.35);
+    const fs2 = fs * 0.72; ctx.font = `700 ${fs2}px system-ui,sans-serif`; ctx.lineWidth = Math.max(2, fs2 * 0.16);
+    const tt = fmt(troopsOf(P)); ctx.strokeText(tt, sx, sy + fs * 0.5); ctx.fillText(tt, sx, sy + fs * 0.5);
+  }
+
+  // hover / placement ghost
+  if (hov >= 0 && ME && !demo) {
+    const hx = hov % W, hy = (hov / W) | 0, [sx, sy] = w2s(hx + 0.5, hy + 0.5);
+    if (phase === 'spawn') {
+      ctx.strokeStyle = terrain[hov] && (!owner[hov] || owner[hov] === ME) ? 'rgba(255,255,255,.9)' : 'rgba(255,80,80,.9)';
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy, Math.max(6, 4.2 * z), 0, 7); ctx.stroke();
+    } else if (placeMode && players[ME].alive) {
+      const r = placeCheck(players[ME], placeMode, hov);
+      let gx = sx, gy = sy;
+      if (r.ok && r.tile !== hov) [gx, gy] = w2s(r.tile % W + 0.5, ((r.tile / W) | 0) + 0.5);
+      drawIcon(ctx, placeMode, gx, gy, is * 1.15, players[ME].css, 0.75);
+      ctx.strokeStyle = r.ok ? 'rgba(90,220,120,.95)' : 'rgba(255,90,90,.95)'; ctx.lineWidth = 2;
+      const rr = placeMode === 'defense' ? DEF_R : placeMode === 'sam' ? SAM_R : NUKE_R[placeMode] || 0;
+      ctx.beginPath(); ctx.arc(gx, gy, rr ? rr * z : is * 0.9, 0, 7); ctx.stroke();
+    } else if (z > 5) {
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.strokeRect(sx - z / 2, sy - z / 2, z, z);
+    }
+  }
+}
+
+// ============================================================ loop
+let last = performance.now(), acc = 0;
+function frame(now) {
+  const dt = Math.min(250, now - last); last = now;
+  if (phase !== 'none' && speed > 0) {
+    acc += dt * speed; let n = 0;
+    while (acc >= 1000 / TPS && n < 12) { step(); acc -= 1000 / TPS; n++; }
+    if (n >= 12) acc = 0;
+  }
+  if (!demo && keys.size) {
+    const v = 600 * dt / 1000 / cam.z;
+    if (keys.has('w') || keys.has('arrowup')) cam.y -= v;
+    if (keys.has('s') || keys.has('arrowdown')) cam.y += v;
+    if (keys.has('a') || keys.has('arrowleft')) cam.x -= v;
+    if (keys.has('d') || keys.has('arrowright')) cam.x += v;
+    clampCam();
+  }
+  render(speed > 0 ? clamp(acc / (1000 / TPS), 0, 1) : 1, dt);
+  frameN++;
+  if (!ui.hud.hidden && frameN % 3 === 0) updateHUD();
+  requestAnimationFrame(frame);
+}
+
+// ============================================================ menu wiring
+function segVal(id) { return document.querySelector(`#${id} .on`).dataset.v; }
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+}));
+$('mBots').oninput = e => $('mBotsV').textContent = e.target.value;
+try { $('mName').value = localStorage.getItem('frontlines.name') || ''; } catch (e) { }
+$('mPlay').onclick = () => {
+  const name = $('mName').value.trim().slice(0, 16) || 'You';
+  try { localStorage.setItem('frontlines.name', name); } catch (e) { }
+  newGame({ name, map: segVal('mMap'), size: segVal('mSize'), diff: segVal('mDiff'), bots: +$('mBots').value, seed: $('mSeed').value.trim() });
+  $('sRatio').value = 60; $('sAtt').value = 30;
+};
+
+startDemo();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

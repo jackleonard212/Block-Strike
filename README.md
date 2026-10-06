@@ -7,6 +7,16 @@ Two files:
 - `index.html` is the whole game, one file you can paste into any editor. It loads three.js from a CDN, so it needs internet.
 - `server.js` is the optional multiplayer server. It has no dependencies, only Node 14 or newer.
 
+## Frontlines (world conquest)
+
+`frontlines.html` is a second, separate game: a real-time strategy game in the style of OpenFront.io. Open it in any desktop or mobile browser. It needs no internet and no install. With the server running, it is at `http://<server-ip>:3000/frontlines.html`.
+
+- Pick a starting spot, then expand into the wilderness and fight up to 60 AI nations on a randomly generated world (continents, islands or Pangaea).
+- **Left click** land to attack it with your *Attack size* share of troops. If you can't reach it by land, a boat sails there.
+- **Right click** (long-press on touch) opens the action menu: build, send boats, request or break alliances, launch nukes.
+- **Buildings** (keys 1–8): City, Port (trade ships earn gold), Defense Post, Missile Silo, SAM Launcher, Warship, Atom Bomb, Hydrogen Bomb.
+- The troops/workers slider trades fighting strength for gold income. Hold 80% of the land to win.
+
 ## Play with friends (nothing to install)
 
 1. Open the game, set **Mode** to **Multiplayer** and click **HOST A ROOM**. You get a 5-letter code.

@@ -31,6 +31,12 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(data);
     });
+  } else if (req.url.startsWith("/frontlines.html")) {
+    fs.readFile(path.join(__dirname, "frontlines.html"), (err, data) => {
+      if (err) { res.writeHead(404); return res.end("frontlines.html not found"); }
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(data);
+    });
   } else if (req.url.startsWith("/servers.json")) {
     fs.readFile(path.join(__dirname, "servers.json"), (err, data) => {
       res.writeHead(200, { "Content-Type": "application/json" });
