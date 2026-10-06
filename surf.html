@@ -44,6 +44,11 @@ body{margin:0;background:var(--ink);color:var(--foam);font-family:var(--fu);over
   font:inherit;font-size:calc(var(--s)*4px);color:var(--foam);background:rgba(18,15,38,.55);border:0;padding:calc(var(--s)*1px) calc(var(--s)*2px)}
 #mute:focus-visible,button:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
 #spot{position:absolute;left:calc(var(--s)*5px);bottom:calc(var(--s)*4px);font-size:calc(var(--s)*4px);color:var(--foam);opacity:.8;letter-spacing:.08em}
+#spdw{position:absolute;left:calc(var(--s)*5px);bottom:calc(var(--s)*10px);font-size:calc(var(--s)*4px)}
+#spdw .cbar{width:calc(var(--s)*40px)}
+#spd{transition:background .2s}
+#spdw.pocket #spd{background:var(--sun)}
+#spdw.pocket #spdl{color:var(--sun)}
 #tube{position:absolute;left:50%;top:calc(var(--s)*6px);transform:translateX(-50%);font-family:var(--fd);font-size:calc(var(--s)*10px);
   color:var(--foam);background:rgba(18,15,38,.55);padding:0 calc(var(--s)*4px);white-space:nowrap;animation:throb .5s steps(2) infinite alternate}
 @keyframes throb{to{color:var(--sun)}}
@@ -81,11 +86,12 @@ body{margin:0;background:var(--ink);color:var(--foam);font-family:var(--fu);over
 </head>
 <body>
 <div id="stage">
-  <canvas id="c" width="320" height="180"></canvas>
+  <canvas id="c" width="272" height="153"></canvas>
   <div id="hud">
     <div class="tl"><div class="lbl">SCORE</div><div id="score">0</div><div id="combo">COMBO <b>x1</b></div><div class="cbar"><i id="cbar"></i></div></div>
     <div class="tr"><div id="boards"></div><div class="lbl">BEST <span id="best">0</span></div></div>
     <div id="tube" hidden></div>
+    <div id="spdw"><div class="lbl" id="spdl">SPEED</div><div class="cbar"><i id="spd"></i></div></div>
     <div id="spot"></div>
     <button id="mute" type="button">SOUND: ON</button>
   </div>
@@ -94,7 +100,7 @@ body{margin:0;background:var(--ink);color:var(--foam);font-family:var(--fu);over
   <div id="title" class="ov">
     <h1>SWELL RIDER</h1>
     <p>Ride four different breaks. Stay ahead of the whitewater and get barreled.</p>
-    <p class="keys">UP / DOWN carve the face · RIGHT pump · LEFT brake<br>Brake back under the curling lip to get barreled<br>Hit the lip fast to launch · LEFT / RIGHT to spin</p>
+    <p class="keys">UP / DOWN steer the board · drop down the face for speed<br>RIGHT pump · LEFT stall back under the lip to get barreled<br>Aim up at the lip fast to launch · LEFT / RIGHT spin · UP / DOWN grab</p>
     <button class="go" id="play" type="button">PADDLE OUT</button>
   </div>
   <div id="over" class="ov" hidden>
@@ -105,7 +111,7 @@ body{margin:0;background:var(--ink);color:var(--foam);font-family:var(--fu);over
   <div id="paused" class="ov" hidden><h2>PAUSED</h2><p>Press P or tap to keep surfing</p></div>
 </div>
 <div id="touch">
-  <div class="grp"><button data-k="up" type="button">▲<small>CLIMB</small></button><button data-k="down" type="button">▼<small>DROP</small></button></div>
+  <div class="grp"><button data-k="up" type="button">▲<small>TURN UP</small></button><button data-k="down" type="button">▼<small>TURN DOWN</small></button></div>
   <div class="grp"><button data-k="left" type="button">◀<small>BRAKE</small></button><button data-k="right" type="button">▶<small>PUMP</small></button></div>
 </div>
 
@@ -113,8 +119,13 @@ body{margin:0;background:var(--ink);color:var(--foam);font-family:var(--fu);over
 'use strict';
 // ------------------------------------------------------------------ setup
 const W = 320, H = 180, T = 158, HZ = 62;          // T = trough line, HZ = horizon
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-ctx.imageSmoothingEnabled = false;
+const VW = 272, VH = 153;                           // the camera's window onto the world (about 1.18x zoom)
+const cv = document.getElementById('c'), vctx = cv.getContext('2d');
+const world = document.createElement('canvas'); world.width = W; world.height = H;
+const ctx = world.getContext('2d');
+ctx.imageSmoothingEnabled = false; vctx.imageSmoothingEnabled = false;
+const GRAV = 60;                                    // how much speed a full drop down the face is worth
+const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const img = ctx.createImageData(W, H), px = new Uint32Array(img.data.buffer);
 const pk = hex => { const n = parseInt(hex.slice(1), 16); return (0xff000000 | ((n & 255) << 16) | (n & 0xff00) | ((n >> 16) & 255)) >>> 0; };
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -180,6 +191,36 @@ const SURFER = sprite([
   '.....bb..bb.....',
   '....bb....bb....',
   '...kk......kk...',
+  '.wwwwwwwwwwwwwww',
+  '..rrrrrrrrrrrrr.',
+], SURF_PAL);
+// crouched: pumping, stalling and tucked in the tube
+const SURFER_LOW = sprite([
+  '................',
+  '................',
+  '.........hhh....',
+  '........hkkkh...',
+  '.....ssssskk....',
+  '..kkssssss..kk..',
+  '.....ssss.......',
+  '....bbbbbbb.....',
+  '...bb.....bb....',
+  '..kk.......kk...',
+  '.wwwwwwwwwwwwwww',
+  '..rrrrrrrrrrrrr.',
+], SURF_PAL);
+// one hand on the rail in the air
+const SURFER_GRAB = sprite([
+  '................',
+  '........hhh.....',
+  '.......hkkkh....',
+  '....kk..kkk.....',
+  '......sssss.....',
+  '.....ssssss.....',
+  '.....bbbbbk.....',
+  '....bb...bk.....',
+  '...bb.....k.....',
+  '..kk.....kk.....',
   '.wwwwwwwwwwwwwww',
   '..rrrrrrrrrrrrr.',
 ], SURF_PAL);
@@ -279,7 +320,8 @@ const popsEl = $('pops');
 function popup(text, x, y, cls = '', sub = '') {
   if (demo) return;
   const el = document.createElement('div'); el.className = 'pop ' + cls;
-  el.style.left = clamp(x, 40, W - 40) / W * 100 + '%'; el.style.top = clamp(y, 30, H - 10) / H * 100 + '%';
+  const vx = x - (cam ? cam.x : 0), vy = y - (cam ? cam.y : 0);
+  el.style.left = clamp(vx, 40, VW - 40) / VW * 100 + '%'; el.style.top = clamp(vy, 28, VH - 10) / VH * 100 + '%';
   el.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   popsEl.appendChild(el); setTimeout(() => el.remove(), 1250);
 }
@@ -293,6 +335,11 @@ function updateHUD() {
   const lv = demo ? 0 : G.lives;
   if (lv !== lastLives) { $('boards').innerHTML = Array.from({ length: lv }, () => `<img src="${boardURL}" alt="board">`).join(''); lastLives = lv; }
   $('best').textContent = Math.floor(best).toLocaleString('en-US');
+  $('spdw').hidden = demo;
+  $('spd').style.width = clamp((P.s - 30) / 170, 0, 1) * 100 + '%';
+  const pk = G.pocket && !demo;
+  $('spdw').classList.toggle('pocket', pk);
+  $('spdl').textContent = pk ? 'IN THE POCKET' : 'SPEED';
 }
 
 
@@ -333,15 +380,18 @@ const clouds = Array.from({ length: 6 }, makeCloud);
 
 // ------------------------------------------------------------------ game state
 let G, P, state = 'title', demo = true, paused = false;
+const cam = { x: 24, y: H - VH, shake: 0 };
+const trail = [];
 let best = 0; try { best = +localStorage.getItem('swellrider.best') || 0; } catch (e) { }
 const parts = [];
 function resetRun() {
-  G = { t: G ? G.t : 0, time: 0, setT: 0, c: 70, scroll: G ? G.scroll : 0, score: 0, mult: 1, multT: 0, lives: 3, wave: 1, objs: [], spawnT: 2, curl: 46, surge: 0, gulls: [], flash: 0 };
+  G = { t: G ? G.t : 0, time: 0, setT: 0, c: 70, scroll: G ? G.scroll : 0, score: 0, mult: 1, multT: 0, lives: 3, wave: 1, objs: [], spawnT: 2, curl: 46, surge: 0, gulls: [], flash: 0, pocket: false };
   spawnSurfer();
 }
 function spawnSurfer() {
   if (G) G.surge = 0;
-  P = { x: 150, h: 0.55, vh: 0, v: G.c + 6, air: false, ax: 0, ay: 0, vy: 0, ang: 0, spin: 0, airT: 0, state: 'ride', wipeT: 0,
+  // s = board speed, a = heading in degrees (+ up the face, - down it), v = speed along the wave
+  P = { x: 150, h: 0.55, s: G.c + 8, a: 0, v: G.c + 8, air: false, grab: '', grabT: 0, grabbing: false, floatT: 0, low: false, ax: 0, ay: 0, vy: 0, ang: 0, spin: 0, airT: 0, state: 'ride', wipeT: 0,
     inv: 1.5, barrel: 0, tubeT: 0, tubeMax: 3, deep: false, snapArm: 0, snapCD: 0, spitT: 0, bx: 0, by: 0, bvx: 0, bvy: 0, bang: 0, botSpin: 0, botFlip: 0.9, botMode: 'carve', botT: rnd(3, 6) };
 }
 const waveH = x => { const d = Math.max(0, x - G.curl); return spot.Hmax * (0.5 + 0.5 * Math.exp(-d / spot.falloff)) * (1 + spot.chop * Math.sin(G.t * 1.3 + x * 0.03) + spot.chop * 0.5 * Math.sin(G.t * 2.9 - x * 0.11)); };
@@ -355,19 +405,20 @@ function tubeAt(x) {
 }
 
 // ------------------------------------------------------------------ scoring
-function award(name, pts, bump, x, y) {
+function award(name, pts, bump, x, y, note = '') {
   if (demo) return;
   const got = Math.round(pts * G.mult);
   G.score += got;
   if (bump) G.mult = Math.min(8, G.mult + 1);
   G.multT = 6;
-  popup(name, x, y, '', '+' + got.toLocaleString('en-US') + (G.mult > 1 ? `  x${G.mult}` : ''));
+  popup(name, x, y, '', (note ? note + '  ' : '') + '+' + got.toLocaleString('en-US') + (G.mult > 1 ? `  x${G.mult}` : ''));
 }
 function wipe(reason) {
   if (P.state === 'wipe') return;
   const bx = P.air ? P.ax : P.x, by = P.air ? P.ay : T - P.h * waveH(P.x);
   P.state = 'wipe'; P.wipeT = 1.9; P.ax = bx; P.ay = by - 4; P.vy = -70; P.air = false; P.barrel = 0; P.tubeT = 0;
-  P.bx = bx; P.by = by; P.bvx = rnd(-30, 40); P.bvy = -110; P.bang = 0;
+  P.bx = bx; P.by = by; P.bvx = rnd(-30, 40); P.bvy = -110; P.bang = 0; P.grabbing = false;
+  shake(4);
   for (let i = 0; i < 40; i++) addPart(bx + rnd(-6, 6), by + rnd(-4, 2), rnd(-50, 50), rnd(-110, -20), rnd(0.4, 1), i & 1 ? COL.css.lip : COL.css.foam2);
   splashSound(0.6, 0.9);
   if (demo) return;
@@ -379,16 +430,16 @@ function afterWipe() {
   if (G.lives <= 0) return gameOver();
   G.wave++; G.objs = []; G.setT = 0;
   nextSpot(); spawnSurfer();
-  popup('SET ' + G.wave, W / 2, 80, 'big', spot.name + ' · ' + spot.sub);
+  popup('SET ' + G.wave, cam.x + VW / 2, cam.y + 55, 'big', spot.name + ' · ' + spot.sub);
   blip(330, 660, 0.25, 0.06, 'triangle');
 }
 function completeWave() {
   G.setT = 0;
-  if (!demo) { award('WAVE RIDDEN', 1000, true, W / 2, 70); G.wave++; }
+  if (!demo) { award('WAVE RIDDEN', 1000, true, cam.x + VW / 2, cam.y + 46); G.wave++; }
   G.objs = [];
   nextSpot();
-  P.x = 150; P.h = 0.55; P.vh = 0; P.v = G.c + 6; P.inv = 1.5; P.barrel = 0; P.tubeT = 0;
-  if (!demo) setTimeout(() => popup(spot.name, W / 2, 96, 'big', spot.sub), 500);
+  P.x = 150; P.h = 0.55; P.a = 0; P.s = P.v = G.c + 8; P.inv = 1.5; trail.length = 0; P.barrel = 0; P.tubeT = 0;
+  if (!demo) setTimeout(() => popup(spot.name, cam.x + VW / 2, cam.y + 70, 'big', spot.sub), 500);
   blip(440, 880, 0.3, 0.06, 'triangle');
 }
 function gameOver() {
@@ -402,7 +453,7 @@ function start() {
   initAudio(); if (actx && actx.state === 'suspended') actx.resume();
   $('title').hidden = true; $('over').hidden = true; setPause(false);
   demo = false; state = 'play'; resetRun(); setSpot(0); flash(); popsEl.innerHTML = '';
-  popup('SET 1', W / 2, 80, 'big', spot.name + ' · ' + spot.sub);
+  popup('SET 1', cam.x + VW / 2, cam.y + 55, 'big', spot.name + ' · ' + spot.sub);
   lastLives = -1; lastMult = -1;
 }
 $('play').onclick = start; $('again').onclick = start;
@@ -415,22 +466,28 @@ function botInput() {
   const k = { up: false, down: false, left: false, right: false };
   if (P.state !== 'ride') return k;
   const d = P.x - G.curl;
-  if (P.air) { if (Math.abs(P.spin) < P.botSpin) k.right = true; return k; }
+  if (P.air) {
+    if (Math.abs(P.spin) < P.botSpin) k.right = true;
+    if (P.botGrab && P.airT < 0.35) k.up = true;
+    return k;
+  }
+  // point the board at a heading
+  const steer = want => { k.up = P.a < want - 5; k.down = P.a > want + 5; };
   P.botT -= 1 / 60;
   if (P.botT <= 0) { P.botMode = P.botMode === 'carve' ? 'tube' : 'carve'; P.botT = P.botMode === 'tube' ? rnd(3, 5) : rnd(4, 7); }
   if (P.botMode === 'tube') {
     const tb = tubeAt(P.x), target = tb ? (tb.top + tb.bot) / 2 : 0.4;
-    k.up = P.h < target - 0.04; k.down = P.h > target + 0.04;
+    steer(clamp((target - P.h) * 160, -30, 30));
     const want = clamp(-(d - spot.tube * 0.32) * 1.4, -25, 30), vr = P.v - G.c;
     if (vr > want + 4) k.left = true; else if (vr < want - 4) k.right = true;
     return k;
   }
   if (P.h > P.botFlip) P.botDir = -1;
-  if (P.h < 0.32 || P.botDir === undefined) { P.botDir = 1; P.botFlip = Math.random() < 0.35 ? 1.1 : rnd(0.78, 0.92); }
-  k.up = P.botDir > 0; k.down = P.botDir < 0;
+  if (P.h < 0.3 || P.botDir === undefined) { P.botDir = 1; P.botFlip = Math.random() < 0.35 ? 1.1 : rnd(0.78, 0.92); P.botGrab = Math.random() < 0.5; }
+  steer(P.botDir > 0 ? (P.botFlip > 1 ? 50 : 38) : -48);
   if (d > 150) k.left = true;
-  if (d < spot.tube + 10) k.right = true;
-  for (const o of G.objs) if (o.type !== 'star' && o.x - P.x > 0 && o.x - P.x < 40 && Math.abs(o.h - P.h) < 0.25) { k.up = o.h < P.h + 0.05; k.down = !k.up; }
+  if (d < spot.tube + 10 || (P.botDir > 0 && P.botFlip > 1 && P.s < 130)) k.right = true;
+  for (const o of G.objs) if (o.type !== 'star' && o.x - P.x > 0 && o.x - P.x < 70 && Math.abs(o.h - P.h) < 0.3) steer(o.h < P.h + 0.05 ? 45 : -45);
   return k;
 }
 
@@ -441,6 +498,7 @@ function update(dt) {
   G.surge = P && P.tubeT > P.tubeMax ? G.surge + 26 * dt : Math.max(0, G.surge - 14 * dt);
   G.curl = 46 + 8 * Math.sin(G.t * 0.45) + G.surge;
   G.flash = Math.max(0, G.flash - dt * 2);
+  cam.shake = Math.max(0, cam.shake - dt * 10);
   const live = state === 'play' && !paused;
   if (!live && !demo) return;
   G.time += dt;
@@ -449,11 +507,14 @@ function update(dt) {
   const inp = demo ? botInput() : keys;
   updatePlayer(dt, inp);
   updateObjs(dt);
+  updateTrail(dt);
   if (P.state === 'ride') G.setT += dt;
   if (G.setT > (demo ? 22 : 45) && P.state === 'ride' && !P.air && P.tubeT === 0) completeWave();
+  // the pocket: riding close to the curl, where the wave has the most power
+  G.pocket = P.state === 'ride' && !P.air && P.x - G.curl < spot.tube + 34;
   if (!demo) {
     G.multT -= dt; if (G.multT <= 0 && G.mult > 1) { G.mult = 1; }
-    if (P.state === 'ride') G.score += G.c * dt * 0.2;
+    if (P.state === 'ride') G.score += G.c * dt * (G.pocket ? 0.5 : 0.2);
   }
   for (const c of clouds) { c.x -= (G.c * 0.03 + 2) * c.sp * (spot.rain ? 2.5 : 1) * dt; if (c.x < -c.w - 4) { Object.assign(c, makeCloud()); c.x = W + rnd(0, 40); } }
   if (!spot.rain && Math.random() < dt * 0.15 && G.gulls.length < 3) G.gulls.push({ x: W + 4, y: rnd(14, 44), sp: rnd(14, 26), ph: rnd(0, 6) });
@@ -470,6 +531,21 @@ function update(dt) {
   }
   for (const p of parts) { p.life -= dt; p.vy += 160 * dt; p.x += (p.vx - G.c * 0.15) * dt; p.y += p.vy * dt; }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0 || parts[i].y > H) parts.splice(i, 1);
+  updateCamera(dt);
+}
+function shake(n) { if (!CALM) cam.shake = Math.max(cam.shake, n); }
+function updateCamera(dt) {
+  const air = P.state === 'wipe' || P.air;
+  const sx = air ? P.ax : P.x, sy = air ? P.ay : T - P.h * waveH(P.x);
+  const tx = clamp(sx - VW * 0.42, 0, W - VW), ty = clamp(sy - VH * 0.5, 0, H - VH);
+  const f = Math.min(1, dt * 3.5);
+  cam.x += (tx - cam.x) * f; cam.y += (ty - cam.y) * Math.min(1, dt * (ty < cam.y ? 5 : 2.5));
+}
+// the board leaves a wake on the face that drifts away with the water
+function updateTrail(dt) {
+  if (P.state === 'ride' && !P.air && P.s > 60 && ((G.t * 60) | 0) % 2 === 0) trail.push({ x: P.x - 5, h: P.h, life: 0.7 });
+  for (const t of trail) { t.life -= dt; t.x -= G.c * dt; }
+  while (trail.length && (trail[0].life <= 0 || trail[0].x < G.curl)) trail.shift();
 }
 function updatePlayer(dt, k) {
   if (P.state === 'wipe') {
@@ -485,50 +561,72 @@ function updatePlayer(dt, k) {
     P.vy += 330 * dt; P.ay += P.vy * dt;
     const s = (k.right ? 1 : 0) - (k.left ? 1 : 0);
     if (s) { P.ang += s * 640 * dt; P.spin += s * 640 * dt; }
+    // UP / DOWN grab the rail; let go before you land
+    P.grabbing = k.up || k.down;
+    if (P.grabbing) { P.grabT += dt; if (!P.grab) P.grab = k.up ? 'INDY' : 'TAIL GRAB'; }
     if (P.ax > 312) P.ax = 312;
     if (P.ax < G.curl + 6) return wipe('SWALLOWED!');
     const L = lipY(P.ax);
     if (P.vy > 0 && P.ay >= L) land(L);
     return;
   }
-  // carving on the face
-  const acc = k.up ? 3.4 : k.down ? -3.4 : -1.1;
-  P.vh = clamp(P.vh + acc * dt, -1.7, 1.7);
-  const Hx = waveH(P.x), dh = P.vh * dt;
-  P.h += dh;
-  if (dh < 0) P.v += -dh * Hx * 1.0; else P.v -= dh * Hx * 0.7;
+  // carving on the face: UP / DOWN turn the board, gravity trades height for speed
+  const Hx = waveH(P.x), pow = Hx / spot.Hmax;
   const steep = Math.pow(Math.sin(Math.PI * clamp(P.h, 0, 1)), 0.7);
-  P.v += 30 * steep * (Hx / spot.Hmax) * (k.right ? 1.35 : 1) * dt;
-  if (k.left) P.v -= 70 * dt;
-  if (k.right) P.v += 22 * dt;
-  if (P.x - G.curl < spot.tube * 0.3) P.v += 18 * dt;   // the foam ball shoves you forward
-  P.v -= (P.v * 0.17 + (P.h < 0.1 ? 45 : 0)) * dt;
-  P.v = clamp(P.v, 25, 200);
-  if (P.h <= 0) { P.h = 0; if (P.vh < 0) P.vh = 0; }
+  const turn = 240 - clamp(P.s - 90, 0, 120) * 0.7;              // slower boards turn tighter
+  const steer = (k.up ? 1 : 0) - (k.down ? 1 : 0);
+  if (steer) P.a += steer * turn * dt;
+  else P.a -= Math.sign(P.a) * Math.min(Math.abs(P.a), 75 * dt); // hands off: trim back to riding along the wave
+  P.a = clamp(P.a, -65, 65);
+  const ar = P.a * Math.PI / 180, sa = Math.sin(ar), ca = Math.cos(ar);
+  P.s -= GRAV * sa * (0.35 + 0.65 * steep) * dt;                  // dropping speeds you up, climbing costs speed
+  P.s += 30 * steep * pow * dt;                                    // the breaking wave drives you along
+  if (k.right) P.s += (24 + 24 * steep * pow) * (sa < 0 ? 1.35 : 1) * dt;
+  if (k.left) P.s -= 75 * dt;
+  if (P.x - G.curl < spot.tube * 0.3) P.s += 18 * dt;            // the foam ball shoves you forward
+  P.s -= (P.s * 0.17 + (P.h < 0.1 ? 25 : 0)) * dt;
+  P.s = clamp(P.s, 30, 230);
+  P.v = P.s * ca;
+  P.h += P.s * sa / Hx * dt;
+  P.low = k.right || k.left || P.tubeT > 0;
+  // bottom turn: slamming into the flats nose-down scrubs some speed, then the board can only turn back up
+  if (P.h <= 0) {
+    P.h = 0;
+    if (P.a < 0) { if (!P.bottom) P.s *= 1 - 0.18 * (-P.a / 65); P.a = 0; }
+    P.bottom = true;
+  } else if (P.h > 0.05) P.bottom = false;
   // inside the tube the throwing lip is a ceiling
   const tb = tubeAt(P.x);
-  if (tb && tb.ceil && P.h > tb.top + 0.06) { P.h = tb.top + 0.06; if (P.vh > 0) P.vh = 0; }
+  if (tb && tb.ceil && P.h > tb.top + 0.06) { P.h = tb.top + 0.06; P.a = Math.min(P.a, 0); }
   if (P.h >= 1) {
-    if (P.vh > 0.85) { launch(Hx); return; }
-    P.h = 1; P.vh = Math.min(P.vh, 0);
+    if (P.s * sa > 62) { launch(sa, ca); return; }
+    P.h = 1; P.a = Math.min(P.a, P.floatT > 0.9 ? -25 : 6);   // after a floater the lip drops you back down
   }
   P.x += (P.v - G.c) * dt;
-  if (P.x > 312) { P.x = 312; P.v = Math.min(P.v, G.c + 4); }
+  if (P.x > 312) { P.x = 312; P.s = Math.min(P.s, (G.c + 4) / Math.max(0.3, ca)); }
   if (P.x < G.curl + 4) return wipe('CAUGHT INSIDE!');
-  // snap: hard turn off the top
-  if (P.h > 0.8 && P.vh > 0.45) P.snapArm = 0.35;
+  const by = T - P.h * Hx;
+  // snap: aim up at the lip, then whip the board back down
+  if (P.h > 0.78 && P.a > 20) P.snapArm = 0.4;
   P.snapArm -= dt;
-  if (P.snapArm > 0 && P.vh < -0.35 && P.snapCD <= 0) {
+  if (P.snapArm > 0 && P.a < -20 && P.snapCD <= 0) {
     P.snapCD = 1; P.snapArm = 0;
-    const by = T - P.h * Hx;
-    for (let i = 0; i < 14; i++) addPart(P.x - 4 + rnd(-3, 3), by - 2, rnd(-70, -10), rnd(-90, -30), rnd(0.3, 0.6), COL.css.lip);
-    award('SNAP', 60, false, P.x, by - 14); blip(500, 900, 0.08, 0.05);
+    const big = P.s > 140;
+    for (let i = 0; i < (big ? 26 : 14); i++) addPart(P.x - 4 + rnd(-3, 3), by - 2, rnd(-80, -10), rnd(-100, -30), rnd(0.3, 0.7), COL.css.lip);
+    award(big ? 'BIG SNAP' : 'SNAP', big ? 140 : 60, big, P.x, by - 14); blip(500, 900, 0.08, 0.05);
+    if (big) shake(1.5);
+  }
+  // floater: ride along the top of the lip
+  const onLip = P.h >= 0.97 && !(tb && tb.ceil);
+  if (onLip) P.floatT += dt;
+  else if (P.floatT > 0) {
+    if (P.floatT > 0.5) award('FLOATER', 80 + Math.round(P.floatT * 140), true, P.x, by - 14);
+    P.floatT = 0;
   }
   // barrel: covered by the lip, inside the hollow
-  const tb2 = tubeAt(P.x);
-  const inB = tb2 && tb2.k < 0.8 && P.h >= tb2.bot - 0.04 && P.h <= tb2.top + 0.06;
+  const inB = tb && tb.k < 0.8 && P.h >= tb.bot - 0.04 && P.h <= tb.top + 0.06;
   if (inB) {
-    const deep = tb2.k < 0.3;
+    const deep = tb.k < 0.3;
     if (P.tubeT === 0) P.tubeMax = rnd(2.4, 4.2);
     P.deep = P.deep || deep;
     P.tubeT += dt; P.barrel += dt * (deep ? 1.8 : 1);
@@ -536,10 +634,10 @@ function updatePlayer(dt, k) {
   } else if (P.tubeT > 0) {
     const secs = P.tubeT;
     if (secs > 0.4) {
-      const spit = P.v > G.c + 5, by = T - P.h * Hx;
+      const spit = P.v > G.c + 5;
       let name = (P.deep ? 'DEEP BARREL ' : 'BARREL ') + secs.toFixed(1) + 's', pts = Math.round(P.barrel * 360);
       if (spit) {
-        name += ' + SPIT'; pts = Math.round(pts * 1.5);
+        name += ' + SPIT'; pts = Math.round(pts * 1.5); shake(2);
         for (let i = 0; i < 40; i++) addPart(P.x - 6 + rnd(-4, 4), by - rnd(0, 12), rnd(60, 170), rnd(-60, 10), rnd(0.3, 0.8), i & 1 ? COL.css.lip : COL.css.foam);
       }
       award(name, pts, true, P.x, by - 16);
@@ -547,14 +645,16 @@ function updatePlayer(dt, k) {
     }
     P.tubeT = 0; P.barrel = 0; P.deep = false;
   }
-  // board spray
-  if (Math.abs(P.vh) > 0.45 || P.v > G.c + 25) {
-    const by = T - P.h * Hx;
-    addPart(P.x - 6, by - 1, -(P.v - G.c) * 0.4 - rnd(10, 40), rnd(-50, -5) * (P.vh < 0 ? 1.4 : 0.7), rnd(0.2, 0.45), Math.random() < 0.6 ? COL.css.lip : COL.css.foam2);
+  // board spray: hard turns, stalls and speed throw water off the rail
+  if ((Math.abs(steer) && P.s > 85) || k.left || P.v > G.c + 25) {
+    const n = k.left || Math.abs(P.a) > 40 ? 2 : 1;
+    for (let i = 0; i < n; i++)
+      addPart(P.x - 6, by - 1, -(P.v - G.c) * 0.4 - rnd(10, 40), rnd(-55, -5) * (P.a < 0 ? 1.4 : 0.8), rnd(0.2, 0.45), Math.random() < 0.6 ? COL.css.lip : COL.css.foam2);
   }
 }
-function launch(Hx) {
-  P.air = true; P.ax = P.x; P.ay = lipY(P.x); P.vy = -P.vh * Hx * 1.15; P.ang = -P.vh * 18; P.spin = 0; P.airT = 0;
+function launch(sa, ca) {
+  P.air = true; P.ax = P.x; P.ay = lipY(P.x); P.vy = -P.s * sa * 1.35; P.v = P.s * ca;
+  P.ang = -P.a * 0.6; P.spin = 0; P.airT = 0; P.grab = ''; P.grabT = 0; P.grabbing = false; P.floatT = 0;
   P.botSpin = P.vy < -105 ? 360 : 0; P.snapArm = 0;
   for (let i = 0; i < 16; i++) addPart(P.ax + rnd(-5, 5), P.ay, rnd(-40, 30), rnd(-110, -40), rnd(0.3, 0.7), COL.css.lip);
   blip(220, 520, 0.18, 0.05, 'triangle');
@@ -563,13 +663,21 @@ function land(L) {
   const a = ((P.ang % 360) + 540) % 360 - 180;
   if (Math.abs(a) > 55) { P.ay = L; return wipe(Math.abs(P.spin) > 180 ? 'OVER-ROTATED!' : 'BAD LANDING!'); }
   P.air = false; P.x = P.ax; P.h = 0.96;
-  const Hx = waveH(P.x);
-  P.vh = -clamp(P.vy / Hx, 0.4, 1.7); P.v += 12; P.ang = 0; P.snapArm = 0; P.snapCD = 0.6;
+  // come back down the face pointing the way you fell
+  P.a = -clamp(Math.atan2(P.vy, P.v) * 180 / Math.PI, 20, 60);
+  P.s = clamp(Math.hypot(P.v, P.vy) * 0.85 + 10, 30, 230); P.v = P.s * Math.cos(P.a * Math.PI / 180);
+  P.ang = 0; P.snapArm = 0; P.snapCD = 0.6;
   const rot = Math.round(Math.abs(P.spin) / 360);
-  const name = rot === 0 ? 'AIR' : rot === 1 ? 'AIR 360' : rot === 2 ? 'ALLEY-OOP 720' : `${rot * 360} RODEO`;
-  award(name, 150 + rot * 450 + Math.round(P.airT * 120), true, P.x, L - 16);
+  let name = rot === 0 ? 'AIR' : rot === 1 ? 'AIR 360' : rot === 2 ? 'ALLEY-OOP 720' : `${rot * 360} RODEO`;
+  let pts = 150 + rot * 450 + Math.round(P.airT * 120), note = '';
+  if (P.grabT > 0.2) { name += ' ' + P.grab; pts += Math.round(P.grabT * 400); }
+  if (P.grabbing) { note = 'SKETCHY'; pts = Math.round(pts * 0.5); P.s *= 0.7; }
+  else if (Math.abs(a) < 15) { note = 'CLEAN'; pts = Math.round(pts * 1.25); }
+  P.grabbing = false;
+  award(name, pts, true, P.x, L - 16, note);
   for (let i = 0; i < 18; i++) addPart(P.x + rnd(-6, 6), L, rnd(-60, 30), rnd(-80, -20), rnd(0.3, 0.6), COL.css.lip);
   blip(660, 990 + rot * 200, 0.15, 0.06); splashSound(0.15, 0.3);
+  shake(1 + rot);
 }
 function updateObjs(dt) {
   G.spawnT -= dt;
@@ -595,7 +703,7 @@ function updateObjs(dt) {
     }
   }
   // nothing survives inside the tube or the whitewater
-  G.objs = G.objs.filter(o => !o.dead && o.x > G.curl + spot.tube * 0.5);
+  G.objs = G.objs.filter(o => !o.dead && o.x > G.curl + spot.tube * 0.95);
 }
 function objY(o) { return o.h > 1 ? lipY(o.x) - (o.h - 1) * 60 + Math.sin(G.t * 3 + o.ph) * 2 : T - o.h * waveH(o.x); }
 
@@ -680,6 +788,14 @@ function render() {
   }
   ctx.putImageData(img, 0, 0);
 
+  // wake left on the face
+  ctx.fillStyle = COL.css.foam2;
+  for (const t of trail) {
+    if (t.x < G.curl + 2) continue;
+    ctx.globalAlpha = clamp(t.life / 0.7, 0, 1) * 0.7;
+    ctx.fillRect(t.x | 0, (T - t.h * waveH(t.x)) | 0, 2, 1);
+  }
+  ctx.globalAlpha = 1;
   for (const g of G.gulls) ctx.drawImage(GULL, g.x | 0, (g.y + Math.sin(G.t * 4 + g.ph) * 1.5) | 0);
   for (const o of G.objs) {
     const oy = objY(o) | 0, ox = o.x | 0;
@@ -705,6 +821,10 @@ function render() {
     for (let i = 0; i < 90; i++) { const x = (hash(i, frame >> 1, 9) % (W + 40)) - 20, y = hash(i, frame >> 1, 10) % H; ctx.fillRect(x, y, 1, 3); ctx.fillRect(x - 1, y + 3, 1, 2); }
   }
   if (G.flash > 0) { ctx.fillStyle = `rgba(235,240,255,${G.flash * 0.6})`; ctx.fillRect(0, 0, W, H); }
+  // the camera: a zoomed window that follows the surfer, nudged by screen shake
+  const sh = cam.shake, jx = sh ? Math.round(rnd(-sh, sh)) : 0, jy = sh ? Math.round(rnd(-sh, sh)) : 0;
+  const vx = clamp(Math.round(cam.x) + jx, 0, W - VW), vy = clamp(Math.round(cam.y) + jy, 0, H - VH);
+  vctx.drawImage(world, vx, vy, VW, VH, 0, 0, VW, VH);
 }
 function drawSurfer() {
   if (P.state === 'wipe') {
@@ -715,8 +835,9 @@ function drawSurfer() {
   if (P.inv > 0 && !demo && ((G.t * 12) | 0) % 2) return;
   let x, y, a;
   if (P.air) { x = P.ax; y = P.ay; a = P.ang; }
-  else { x = P.x; y = T - P.h * waveH(P.x); a = clamp(-P.vh * 18, -28, 28); }
-  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(a * Math.PI / 180); ctx.drawImage(SURFER, -8, -11); ctx.restore();
+  else { x = P.x; y = T - P.h * waveH(P.x); a = clamp(-P.a * 0.6, -40, 40); }
+  const spr = P.air ? (P.grabbing ? SURFER_GRAB : SURFER) : P.low ? SURFER_LOW : SURFER;
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(a * Math.PI / 180); ctx.drawImage(spr, -8, -11); ctx.restore();
 }
 
 // ------------------------------------------------------------------ layout + loop
@@ -724,9 +845,9 @@ const stage = $('stage'), touch = $('touch');
 function fit() {
   const th = getComputedStyle(touch).display === 'none' ? 0 : touch.offsetHeight + 10;
   const aw = Math.min(innerWidth - 32, 1600), ah = innerHeight - th - 24;
-  let s = Math.max(0.5, Math.min(aw / W, ah / H));
+  let s = Math.max(0.5, Math.min(aw / VW, ah / VH));
   if (s >= 2) s = Math.floor(s);
-  stage.style.width = W * s + 'px'; stage.style.height = H * s + 'px'; stage.style.setProperty('--s', s);
+  stage.style.width = VW * s + 'px'; stage.style.height = VH * s + 'px'; stage.style.setProperty('--s', s);
 }
 addEventListener('resize', fit); fit();
 document.fonts && document.fonts.ready.then(fit);
@@ -746,7 +867,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__swell = { get G() { return G; }, get P() { return P; }, update, keys, start, botInput, setSpot, tubeAt };
+window.__swell = { get G() { return G; }, get P() { return P; }, update, keys, start, botInput, setSpot, tubeAt, cam };
 </script>
 </body>
 </html>
