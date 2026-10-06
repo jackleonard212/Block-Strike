@@ -31,9 +31,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(data);
     });
-  } else if (req.url.startsWith("/frontlines.html")) {
-    fs.readFile(path.join(__dirname, "frontlines.html"), (err, data) => {
-      if (err) { res.writeHead(404); return res.end("frontlines.html not found"); }
+  } else if (req.url.startsWith("/surf.html")) {
+    fs.readFile(path.join(__dirname, "surf.html"), (err, data) => {
+      if (err) { res.writeHead(404); return res.end("surf.html not found"); }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(data);
     });

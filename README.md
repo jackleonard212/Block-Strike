@@ -7,15 +7,15 @@ Two files:
 - `index.html` is the whole game, one file you can paste into any editor. It loads three.js from a CDN, so it needs internet.
 - `server.js` is the optional multiplayer server. It has no dependencies, only Node 14 or newer.
 
-## Frontlines (world conquest)
+## Swell Rider (pixel surfing)
 
-`frontlines.html` is a second, separate game: a real-time strategy game in the style of OpenFront.io. Open it in any desktop or mobile browser. It needs no internet and no install. With the server running, it is at `http://<server-ip>:3000/frontlines.html`.
+`surf.html` is a separate 2D pixel-art surfing game. Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
 
-- Pick a starting spot, then expand into the wilderness and fight up to 60 AI nations on a randomly generated world (continents, islands or Pangaea).
-- **Left click** land to attack it with your *Attack size* share of troops. If you can't reach it by land, a boat sails there.
-- **Right click** (long-press on touch) opens the action menu: build, send boats, request or break alliances, launch nukes.
-- **Buildings** (keys 1–8): City, Port (trade ships earn gold), Defense Post, Missile Silo, SAM Launcher, Warship, Atom Bomb, Hydrogen Bomb.
-- The troops/workers slider trades fighting strength for gold income. Hold 80% of the land to win.
+- **Up / Down** (or W / S) carve up and down the wave face. Dropping down the face builds speed.
+- **Left** brakes, **Right** pumps. Stay ahead of the whitewater on the left.
+- Hit the lip with speed to launch, then spin with **Left / Right** and land upright for points.
+- Ride deep near the curl for barrel points, grab starfish, and dodge rocks and paddlers. Tricks build a combo multiplier. You get three wipeouts.
+- On phones, on-screen buttons appear under the game.
 
 ## Play with friends (nothing to install)
 
