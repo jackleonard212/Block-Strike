@@ -14,7 +14,9 @@ Two files:
 - **Up / Down** (or W / S) carve up and down the wave face. Dropping down the face builds speed.
 - **Left** brakes, **Right** pumps. Stay ahead of the whitewater on the left.
 - Hit the lip with speed to launch, then spin with **Left / Right** and land upright for points.
-- Ride deep near the curl for barrel points, grab starfish, and dodge rocks and paddlers. Tricks build a combo multiplier. You get three wipeouts.
+- **Get barreled:** brake (Left) to drift back under the curling lip into the tube. The deeper you sit, the more it scores. After a few seconds the tube starts closing, so pump (Right) and drop to shoot out with a spit bonus.
+- Every set (and every 45 seconds of riding) takes you to a different break: Sunset Point, Glass Reef, Storm Bay or Moonlight Bay, each with its own colors, wave size and tube shape.
+- Grab starfish and dodge rocks and paddlers. Tricks build a combo multiplier. You get three wipeouts.
 - On phones, on-screen buttons appear under the game.
 
 ## Play with friends (nothing to install)
