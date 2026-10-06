@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Frontlines</title>
 <style>
+html{color-scheme:dark}
 :root{
   --panel:rgba(12,18,30,.88);--line:rgba(255,255,255,.12);--text:#e8eef7;--muted:#93a1b5;
   --accent:#4fb3ff;--gold:#ffcc4d;--bad:#ff6b6b;--good:#5bd97a;
@@ -56,7 +57,7 @@ details li{margin:3px 0}
 
 #topbar{position:fixed;left:50%;top:10px;transform:translateX(-50%);padding:7px 14px;font-weight:600;white-space:nowrap;text-align:center}
 #topbar.spawn{border-color:#ffcc4d;color:#ffe08a}
-#ctrls{position:fixed;right:10px;top:10px;display:flex;gap:4px;padding:4px}
+#ctrls{position:fixed;right:10px;top:calc(10px + env(safe-area-inset-top, 0px));display:flex;gap:4px;padding:4px}
 #ctrls button{background:#13213a;border:1px solid var(--line);border-radius:6px;padding:5px 9px;min-width:34px}
 #ctrls button.on{background:#2a5a8c;border-color:#4fb3ff}
 
@@ -68,7 +69,7 @@ details li{margin:3px 0}
 .msg .acts button.yes{background:#2c7a45}
 @keyframes pop{from{transform:translateX(20px);opacity:0}}
 
-#bottom{position:fixed;left:10px;right:10px;bottom:10px;display:flex;gap:10px;align-items:flex-end;pointer-events:none}
+#bottom{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));display:flex;gap:10px;align-items:flex-end;pointer-events:none}
 #bottom>*{pointer-events:auto}
 #stats{width:300px;padding:10px 12px;flex:none}
 .bar{height:7px;background:#0b1424;border-radius:4px;overflow:hidden;margin:3px 0 7px}
@@ -115,6 +116,12 @@ details li{margin:3px 0}
 #over h2{margin:0 0 6px;font-size:30px;letter-spacing:.08em}
 #over p{color:var(--muted);margin:4px 0 16px}
 #over .btns{display:flex;gap:8px}
+#ask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,10,18,.55);z-index:11}
+#ask .card{padding:20px 22px;width:min(360px,92vw);text-align:center}
+#ask p{margin:0 0 14px}
+#ask .btns{display:flex;gap:8px}
+#ask .btns button,#over .btns button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#1b2c45;font-weight:700}
+#ask .btns button.yes{background:#7a2a2a}
 #over .btns button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#1b2c45;font-weight:700}
 
 @media (max-width:820px){
@@ -186,6 +193,8 @@ details li{margin:3px 0}
   <div id="ctx" class="panel" hidden></div>
   <div id="tip" class="panel" hidden></div>
   <div id="toast"></div>
+  <div id="ask" hidden><div class="card panel"><p id="askT"></p>
+    <div class="btns"><button id="askNo">Cancel</button><button id="askYes" class="yes">Confirm</button></div></div></div>
   <div id="over" hidden><div class="card panel"><h2 id="oT"></h2><p id="oP"></p>
     <div class="btns"><button id="oWatch">Keep watching</button><button id="oMenu">Main menu</button></div></div></div>
 </div>
@@ -1251,7 +1260,9 @@ function setPlace(t) {
 function setSpeed(s) { speed = s; for (const b of document.querySelectorAll('#ctrls [data-s]')) b.classList.toggle('on', +b.dataset.s === s); }
 document.querySelectorAll('#ctrls [data-s]').forEach(b => b.onclick = () => setSpeed(+b.dataset.s));
 $('cHome').onclick = goHome;
-$('cQuit').onclick = () => { if (gameOverShown || confirm('Leave this game?')) toMenu(); };
+function ask(msg, yes) { $('askT').textContent = msg; $('ask').hidden = false; $('askYes').onclick = () => { $('ask').hidden = true; yes(); }; }
+$('askNo').onclick = () => $('ask').hidden = true;
+$('cQuit').onclick = () => { if (gameOverShown) toMenu(); else ask('Leave this game and return to the menu?', toMenu); };
 $('lbH').onclick = () => { $('lb').classList.toggle('min'); $('lbT').textContent = $('lb').classList.contains('min') ? '▸' : '▾'; };
 $('sRatio').oninput = e => { if (ME) players[ME].ratio = e.target.value / 100; };
 $('sAtt').oninput = e => { if (ME) players[ME].attackRatio = e.target.value / 100; };
@@ -1298,7 +1309,7 @@ function ctxAction(act, t) {
   if (act === 'attack') humanAttack(t);
   else if (act === 'boat') humanAttack(t, true);
   else if (act === 'ally') requestAlliance(ME, o);
-  else if (act === 'break') { if (confirm(`Break your alliance with ${players[o].name}? Other nations will trust you less.`)) breakAlliance(ME, o); }
+  else if (act === 'break') ask(`Break your alliance with ${players[o].name}? Other nations will trust you less.`, () => breakAlliance(ME, o));
   else if (act.startsWith('b:')) tryPlace(act.slice(2), t);
 }
 
