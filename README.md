@@ -7,19 +7,24 @@ Two files:
 - `index.html` is the whole game, one file you can paste into any editor. It loads three.js from a CDN, so it needs internet.
 - `server.js` is the optional multiplayer server. It has no dependencies, only Node 14 or newer.
 
-## Swell Rider (pixel surfing)
+## Swell Rider (3D surfing)
 
-`surf.html` is a separate 2D pixel-art surfing game. Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
+`surf.html` is a separate third-person 3D surfing game built with three.js (loaded from a CDN, so it needs internet). Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
 
-- **Up / Down** (or W / S) turn the board up or down the face. Dropping down the face builds speed; climbing spends it. Slam into the bottom nose-first and you lose some speed, so turn back up smoothly.
-- **Right** pumps (strongest while heading down), **Left** stalls. Stay ahead of the whitewater on the left; riding close to it (the pocket) scores faster.
-- Aim up at the lip with speed to launch. In the air, **Left / Right** spin and **Up / Down** grab the rail (Indy / tail grab). Let go before you land: an upright landing scores a CLEAN bonus, landing still grabbing is SKETCHY.
-- Whip the board from up to down at the top for a **snap** (a big snap at high speed), or ride along the top of the lip for a **floater**.
-- **Get barreled:** stall (Left) to drift back under the curling lip into the tube. The deeper you sit, the more it scores. After a few seconds the tube starts closing, so pump (Right) and drop to shoot out with a spit bonus.
-- The camera is zoomed in and follows you, rising with your airs.
-- Every set (and every 45 seconds of riding) takes you to a different break: Sunset Point, Glass Reef, Storm Bay or Moonlight Bay, each with its own colors, wave size and tube shape.
-- Grab starfish and dodge rocks and paddlers. Tricks build a combo multiplier. You get three wipeouts.
-- On phones, on-screen buttons appear under the game.
+A heat lasts three minutes and, like a real contest, your best two waves count. Pick one of four breaks on the title screen: Sunset Point, Glass Reef, Storm Bay or Moonlight Bay. Each has its own wave size, speed and light.
+
+**Catching waves**
+- You sit in the lineup facing out to sea. Sets roll in from the horizon; the prompt counts down to the next wave and tells you where its peak is.
+- **Left / Right** (or A / D) turn your board. Face the beach, then hold **Up** (or W) to paddle when the prompt says PADDLE NOW. Keep paddling.
+- When the wave picks you up, press **Space** to pop up. Wait too long and you nose-dive. Start too late and the wave passes under you; paddle for too long and you end up inside, where the whitewater gets you.
+- **Space** while lying on your board duck dives under whitewater.
+
+**Riding**
+- You ride away from the peak, ahead of the curl. **Left / Right** carve up and down the face (the camera looks down the line, so the face is on one side of the screen). Dropping builds speed, climbing spends it.
+- **Up** pumps, **Down** stalls. Stall under the throwing lip to get barreled; pump out before it closes for a spit bonus.
+- Aim up at the lip with speed to launch. In the air, **Left / Right** spin and **Up / Down** grab; land upright for a CLEAN bonus.
+- Snaps, carves and floaters score too, and tricks build a combo multiplier. A wipeout halves that wave's score; riding it to the end adds a completion bonus.
+- On phones, on-screen buttons appear at the bottom.
 
 ## Play with friends (nothing to install)
 
