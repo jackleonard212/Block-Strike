@@ -15,14 +15,14 @@ A heat lasts three minutes and, like a real contest, your best two waves count. 
 
 **Catching waves**
 - You sit in the lineup facing out to sea. Sets roll in from the horizon; the prompt counts down to the next wave and tells you where its peak is.
-- **Left / Right** (or A / D) turn your board. Face the beach, then hold **Up** (or W) to paddle when the prompt says PADDLE NOW. Keep paddling.
-- When the wave picks you up, press **Space** to pop up. Wait too long and you nose-dive. Start too late and the wave passes under you; paddle for too long and you end up inside, where the whitewater gets you.
-- **Space** while lying on your board duck dives under whitewater.
+- When the bar fills, hold **Up** (or W). Holding Up turns you to face the beach and paddles you in; keep holding until the wave picks you up. You stand up on your own (**Space** pops up sooner).
+- Start too late and the wave passes under you. If whitewater hits you, you are sent back out to the lineup. **Space** while lying on your board duck dives under whitewater.
+- **Left / Right** (or A / D) turn your board by hand.
 
 **Riding**
-- You ride away from the peak, ahead of the curl. **Left / Right** carve up and down the face (the camera looks down the line, so the face is on one side of the screen). Dropping builds speed, climbing spends it.
+- You ride away from the peak, ahead of the curl. Hands off, the board holds a line across the middle of the face. **Left / Right** carve up and down the face (the camera looks down the line, so the face is on one side of the screen). Dropping builds speed, climbing spends it.
 - **Up** pumps, **Down** stalls. Stall under the throwing lip to get barreled; pump out before it closes for a spit bonus.
-- Aim up at the lip with speed to launch. In the air, **Left / Right** spin and **Up / Down** grab; land upright for a CLEAN bonus.
+- Aim up at the lip with speed to launch. In the air, **Left / Right** spin and **Up / Down** grab; let go and the board squares up for the landing.
 - Snaps, carves and floaters score too, and tricks build a combo multiplier. A wipeout halves that wave's score; riding it to the end adds a completion bonus.
 - On phones, on-screen buttons appear at the bottom.
 

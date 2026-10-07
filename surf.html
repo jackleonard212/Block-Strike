@@ -139,16 +139,16 @@ const Z_SPAWN = -62, Z_BREAK = 0, Z_SHORE = 56, Z_LINEUP = -13;
 
 // ------------------------------------------------------------------ surf spots
 const SPOTS = [
-  { name: 'SUNSET POINT', sub: 'long, peeling, forgiving', H: 2.3, c: 3.3, peel: 7.0, hollow: 1.35, chop: 0.12, spread: 46,
+  { name: 'SUNSET POINT', sub: 'long, peeling, forgiving', H: 2.8, c: 3.3, peel: 7.0, hollow: 1.35, chop: 0.12, spread: 46,
     skyTop: '#2c2150', skyMid: '#b8607e', horizon: '#ffc493', sun: '#fff0c8', sunDir: [0.35, 0.12, -0.93],
     deep: '#16465e', shal: '#23798a', face: '#62c9b6', foam: '#ffffff', fog: '#e7a98c', hill: '#4b3a6c', sand: '#d9a873', light: '#ffd7b0', amb: '#7a5a92' },
-  { name: 'GLASS REEF', sub: 'hollow, clear and fast', H: 2.7, c: 3.5, peel: 8.2, hollow: 1.1, chop: 0.05, spread: 40,
+  { name: 'GLASS REEF', sub: 'hollow, clear and fast', H: 3.3, c: 3.5, peel: 8.2, hollow: 1.1, chop: 0.05, spread: 40,
     skyTop: '#2a6fc9', skyMid: '#7db8ea', horizon: '#d8eefa', sun: '#ffffff', sunDir: [-0.3, 0.7, -0.65],
     deep: '#0e7590', shal: '#1fb2c0', face: '#86f2e2', foam: '#ffffff', fog: '#cfe8f5', hill: '#2c8a66', sand: '#f1dfb0', light: '#ffffff', amb: '#8cc2e0' },
-  { name: 'STORM BAY', sub: 'heavy, dark and choppy', H: 3.2, c: 3.7, peel: 7.4, hollow: 1.3, chop: 0.3, spread: 52, rain: true, noSun: true,
+  { name: 'STORM BAY', sub: 'heavy, dark and choppy', H: 3.8, c: 3.7, peel: 7.4, hollow: 1.3, chop: 0.3, spread: 52, rain: true, noSun: true,
     skyTop: '#23282e', skyMid: '#3f474d', horizon: '#5d666a', sun: '#9aa4a8', sunDir: [0.2, 0.6, -0.75],
     deep: '#1a2e2d', shal: '#2a4b45', face: '#4f7f6f', foam: '#e6ece8', fog: '#4b5357', hill: '#20252a', sand: '#6f6a5e', light: '#c0c8cc', amb: '#4a5458' },
-  { name: 'MOONLIGHT BAY', sub: 'small, glassy, glowing foam', H: 1.9, c: 3.1, peel: 6.4, hollow: 1.25, chop: 0.06, spread: 40, night: true,
+  { name: 'MOONLIGHT BAY', sub: 'small, glassy, glowing foam', H: 2.4, c: 3.1, peel: 6.4, hollow: 1.25, chop: 0.06, spread: 40, night: true,
     skyTop: '#03051a', skyMid: '#0d1640', horizon: '#26346a', sun: '#e9e6ff', sunDir: [-0.4, 0.3, -0.87],
     deep: '#081a46', shal: '#16397a', face: '#3f8fd4', foam: '#8ff0ff', fog: '#151f48', hill: '#0b0e24', sand: '#3a3c5a', light: '#a9b4ff', amb: '#26306a' },
 ];
@@ -217,7 +217,8 @@ vec2 H(vec2 p){
     foam=max(foam,max(bore,crest*0.9));
   }
   return vec2(y,foam);
-}`;
+}
+float churn(vec2 p){ return (sin(p.x*1.7+uT*3.1)*sin(p.y*2.3-uT*2.4)+sin(p.x*3.9-uT*4.2+p.y*1.3)*0.5)*0.5; }`;
 const GLSL_SHADE = `
 uniform vec3 uDeep,uShal,uFaceC,uFoam,uSky,uSun,uSunDir,uFog; uniform float uFogNear,uFogFar,uT;
 vec3 fogIt(vec3 c,vec3 p){return mix(c,uFog,sst(uFogNear,uFogFar,length(cameraPosition-p)));}
@@ -228,10 +229,13 @@ vec3 water(vec3 n,vec3 p,float hgt,float foam,float seed){
   vec3 c=mix(uDeep,uShal,clamp(hgt*0.45+0.25,0.,1.));
   // light shining through a steep face that looks toward the beach
   float through=clamp(n.z*1.8,0.,1.)*clamp((1.-n.y)*2.2,0.,1.)*clamp(hgt*0.7,0.,1.);
+  float streak=vn(vec2(p.x*2.2,p.y*0.35+uT*0.25))*0.6+vn(vec2(p.x*6.5,p.y*0.8-uT*0.4))*0.4;
   c=mix(c,uFaceC,through);
+  c*=1.+(streak-0.5)*0.35*clamp(through*1.5+0.15,0.,1.);
   float fres=pow(1.-max(dot(n,V),0.),3.);
   c=mix(c,uSky,fres*0.5);
   vec3 R=reflect(-V,n); c+=uSun*pow(max(dot(R,uSunDir),0.),90.)*0.9;
+  c+=uSun*step(0.985,vn(p.xz*9.+uT*1.7))*pow(max(dot(R,uSunDir),0.),8.)*0.6;
   c*=0.78+0.22*max(dot(n,uSunDir),0.);
   vec2 q=p.xz+vec2(seed*0.37,p.y*1.3);
   float nz=vn(q*1.6+vec2(0.,uT*0.6))*0.6+vn(q*5.1-vec2(uT*0.9,0.))*0.4;
@@ -253,7 +257,9 @@ function waterMat(outer) {
       varying vec3 vPos; varying vec3 vN; varying float vFoam;
       void main(){
         vec4 wp=modelMatrix*vec4(position,1.); vec2 p=wp.xz; vec2 h=H(p); float e=0.25;
-        float hx=H(p+vec2(e,0.)).x, hz=H(p+vec2(0.,e)).x;
+        vec2 h1=H(p+vec2(e,0.)), h2=H(p+vec2(0.,e));
+        float hx=h1.x+churn(p+vec2(e,0.))*0.22*h1.y, hz=h2.x+churn(p+vec2(0.,e))*0.22*h2.y;
+        h.x+=churn(p)*0.22*h.y;
         vN=vec3(h.x-hx,e,h.x-hz); wp.y=h.x; vPos=wp.xyz; vFoam=h.y;
         gl_Position=projectionMatrix*viewMatrix*wp;
       }`,
@@ -275,7 +281,9 @@ const lipMat = new THREE.ShaderMaterial({
     varying vec3 vPos; varying vec3 vN; varying float vFoam;
     void main(){
       vec3 n=normalize(vN); if(!gl_FrontFacing) n=-n;
-      gl_FragColor=vec4(water(n,vPos,2.2,vFoam,vPos.y*3.),1.);
+      vec3 c=water(n,vPos,2.2,vFoam,vPos.y*3.);
+      c=mix(c,uFaceC*1.15,0.25*(1.-vFoam));        // thin water lit from behind
+      gl_FragColor=vec4(c,1.);
     }`,
 });
 
@@ -397,42 +405,124 @@ function buildLip(L, w, sgn) {
   L.m.visible = true;
 }
 
-// ------------------------------------------------------------------ the surfer (blocky, like Block Strike)
-const SKIN = 0xe2a06f, SHIRT = 0xe8523f, SHORTS = 0x26408f, HAIR = 0x3b2416;
-const lam = c => new THREE.MeshLambertMaterial({ color: c });
-function bx(w, h, d, col, px = 0, py = 0, pz = 0) { const g = new THREE.BoxGeometry(w, h, d); g.translate(px, py, pz); return new THREE.Mesh(g, lam(col)); }
+// ------------------------------------------------------------------ the surfer
+const phong = (c, sh = 20) => new THREE.MeshPhongMaterial({ color: c, shininess: sh, specular: 0x202020 });
+const MAT = { skin: phong(0xd99a6c, 14), rash: phong(0xe8523f, 30), trim: phong(0xffd36b, 30), shorts: phong(0x26408f, 8), hair: phong(0x2e1b10, 6),
+  dark: phong(0x15151c, 60), board: phong(0xf6f1e4, 70), stripe: phong(0x1b7483, 70), fin: phong(0x20202a, 50) };
+function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+// a limb segment hanging down from its joint
+function seg(r1, r2, len, mat, y0 = 0) { const g = new THREE.CylinderGeometry(r1, r2, len, 12); g.translate(0, -len / 2 - y0, 0); return new THREE.Mesh(g, mat); }
+function joint(parent, x, y, z) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; }
 const rig = new THREE.Group(); scene.add(rig);
+
+// the board: a real outline with rocker, a stringer, a deck stripe and three fins
 const boardG = new THREE.Group(); rig.add(boardG);
-boardG.add(bx(0.56, 0.07, 1.7, 0xfff7e6, 0, 0.035, -0.1));
-{ const n = bx(0.4, 0.069, 0.4, 0xfff7e6, 0, 0.035, 0); n.rotation.y = Math.PI / 4; n.position.z = 0.72; boardG.add(n); }
-boardG.add(bx(0.09, 0.075, 1.85, 0xf2a53a, 0, 0.037, -0.02));
-boardG.add(bx(0.03, 0.2, 0.22, 0x222233, 0, -0.1, -0.85));
-const body = new THREE.Group(); body.position.y = 0.07; rig.add(body);
-const hips = new THREE.Group(); body.add(hips);
-const torso = new THREE.Group(); hips.add(torso);
-torso.add(bx(0.42, 0.58, 0.24, SHIRT, 0, 0.29, 0));
-const head = new THREE.Group(); head.position.y = 0.6; torso.add(head);
-head.add(bx(0.27, 0.27, 0.27, SKIN, 0, 0.14, 0)); head.add(bx(0.29, 0.1, 0.29, HAIR, 0, 0.26, 0));
-function limb(col1, col2, len, x, y) { const g = new THREE.Group(); g.position.set(x, y, 0); g.add(bx(0.15, len * 0.5, 0.17, col1, 0, -len * 0.25, 0)); g.add(bx(0.14, len * 0.5, 0.16, col2, 0, -len * 0.75, 0)); return g; }
-const armL = limb(SHIRT, SKIN, 0.62, -0.29, 0.54), armR = limb(SHIRT, SKIN, 0.62, 0.29, 0.54); torso.add(armL); torso.add(armR);
-const legL = limb(SHORTS, SKIN, 0.84, -0.12, 0), legR = limb(SHORTS, SKIN, 0.84, 0.12, 0); hips.add(legL); hips.add(legR);
-// poses: target values eased each frame
-const POSES = {
-  stand:  { ry: Math.PI / 2, hy: 0.84, hrx: 0, trx: 0.28, lz: 0.34, lx: 0, alz: 1.25, arz: -1.25, alx: 0, arx: 0 },
-  crouch: { ry: Math.PI / 2, hy: 0.6, hrx: 0, trx: 0.7, lz: 0.62, lx: 0, alz: 0.9, arz: -0.9, alx: 0.3, arx: 0.3 },
-  grab:   { ry: Math.PI / 2, hy: 0.55, hrx: 0, trx: 0.95, lz: 0.6, lx: 0, alz: 1.3, arz: -0.1, alx: 0, arx: 0.4 },
-  prone:  { ry: 0, hy: 0.14, hrx: Math.PI / 2, trx: -0.25, lz: 0.05, lx: 0, alz: 0.1, arz: -0.1, alx: 0, arx: 0 },
-  sit:    { ry: 0, hy: 0.1, hrx: 0, trx: 0.05, lz: 1.15, lx: -0.4, alz: 0.35, arz: -0.35, alx: 0, arx: 0 },
-  sprawl: { ry: 0, hy: 0.5, hrx: 0.6, trx: 0.4, lz: 0.9, lx: 0.4, alz: 2.4, arz: -2.4, alx: 0.5, arx: -0.5 },
+{
+  const L = 1.95, W = 0.27, s = new THREE.Shape();
+  s.moveTo(0, L / 2);
+  s.quadraticCurveTo(W * 0.92, L * 0.3, W, -L * 0.06);
+  s.quadraticCurveTo(W * 0.96, -L * 0.38, W * 0.5, -L / 2);
+  s.lineTo(-W * 0.5, -L / 2);
+  s.quadraticCurveTo(-W * 0.96, -L * 0.38, -W, -L * 0.06);
+  s.quadraticCurveTo(-W * 0.92, L * 0.3, 0, L / 2);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.022, bevelSize: 0.022, bevelSegments: 3, curveSegments: 18 });
+  g.rotateX(Math.PI / 2); g.translate(0, 0.057, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const z = p.getZ(i); p.setY(i, p.getY(i) + Math.pow(Math.max(0, z - 0.35), 2) * 0.22 + Math.pow(Math.max(0, -z - 0.6), 2) * 0.12); }
+  g.computeVertexNormals();
+  boardG.add(new THREE.Mesh(g, MAT.board));
+  const st = new THREE.BoxGeometry(0.012, 0.004, L * 0.86); boardG.add(mesh(st, MAT.dark, 0, 0.081, -0.02));
+  const band = new THREE.BoxGeometry(0.4, 0.004, 0.07); boardG.add(mesh(band, MAT.stripe, 0, 0.081, 0.45));
+  const fs = new THREE.Shape(); fs.moveTo(0, 0); fs.lineTo(0.13, 0); fs.quadraticCurveTo(0.03, -0.03, -0.03, -0.12); fs.quadraticCurveTo(0.0, -0.05, 0, 0);
+  const fg = new THREE.ExtrudeGeometry(fs, { depth: 0.008, bevelEnabled: false }); fg.rotateY(-Math.PI / 2);
+  for (const [x, z, r] of [[0, -0.85, 0], [-0.17, -0.7, 0.06], [0.17, -0.7, -0.06]]) { const f = mesh(fg, MAT.fin, x, 0.01, z); f.rotation.y = r; boardG.add(f); }
+}
+
+// the body: joints with real knees and elbows
+const body = new THREE.Group(); body.position.y = 0.075; rig.add(body);
+const hips = joint(body, 0, 0.8, 0);
+{ const g = new THREE.CylinderGeometry(0.15, 0.16, 0.22, 14); g.scale(1, 1, 0.72); hips.add(mesh(g, MAT.shorts, 0, -0.02, 0)); }
+const torso = joint(hips, 0, 0.08, 0);
+{
+  const chest = new THREE.CylinderGeometry(0.2, 0.15, 0.48, 14); chest.scale(1, 1, 0.66); torso.add(mesh(chest, MAT.rash, 0, 0.24, 0));
+  const collar = new THREE.TorusGeometry(0.06, 0.012, 6, 16); collar.rotateX(Math.PI / 2); torso.add(mesh(collar, MAT.trim, 0, 0.49, 0));
+  const stripeG = new THREE.CylinderGeometry(0.193, 0.18, 0.04, 14); stripeG.scale(1, 1, 0.67); torso.add(mesh(stripeG, MAT.trim, 0, 0.3, 0));
+  for (const x of [-0.19, 0.19]) torso.add(mesh(new THREE.SphereGeometry(0.09, 12, 10), MAT.rash, x, 0.43, 0));
+  torso.add(mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.1, 10), MAT.skin, 0, 0.52, 0));
+}
+const head = joint(torso, 0, 0.56, 0);
+{
+  const sk = new THREE.SphereGeometry(0.12, 18, 14); sk.scale(0.95, 1.08, 1.02); head.add(mesh(sk, MAT.skin, 0, 0.12, 0));
+  const hair = new THREE.SphereGeometry(0.127, 18, 12, 0, Math.PI * 2, 0, 1.35); hair.scale(0.97, 1.08, 1.06); head.add(mesh(hair, MAT.hair, 0, 0.135, -0.012));
+  const fringe = new THREE.BoxGeometry(0.2, 0.04, 0.05); const fr = mesh(fringe, MAT.hair, 0, 0.215, 0.09); fr.rotation.x = 0.4; head.add(fr);
+  for (const x of [-0.042, 0.042]) head.add(mesh(new THREE.SphereGeometry(0.016, 8, 6), MAT.dark, x, 0.13, 0.112));
+  head.add(mesh(new THREE.BoxGeometry(0.025, 0.04, 0.03), MAT.skin, 0, 0.1, 0.122));
+  for (const x of [-0.118, 0.118]) head.add(mesh(new THREE.SphereGeometry(0.025, 8, 6), MAT.skin, x, 0.12, 0));
+}
+function arm(x) {
+  const sh = joint(torso, x, 0.43, 0);
+  sh.add(seg(0.064, 0.06, 0.12, MAT.rash)); sh.add(seg(0.052, 0.046, 0.27, MAT.skin));
+  const el = joint(sh, 0, -0.27, 0);
+  el.add(seg(0.045, 0.036, 0.25, MAT.skin)); el.add(mesh(new THREE.SphereGeometry(0.045, 10, 8), MAT.skin, 0, -0.27, 0.01));
+  return [sh, el];
+}
+function leg(x) {
+  const th = joint(hips, x, -0.06, 0);
+  th.add(seg(0.086, 0.074, 0.3, MAT.shorts)); th.add(seg(0.07, 0.058, 0.44, MAT.skin));
+  const kn = joint(th, 0, -0.44, 0);
+  kn.add(seg(0.058, 0.044, 0.42, MAT.skin)); kn.add(mesh(new THREE.BoxGeometry(0.09, 0.05, 0.22), MAT.skin, 0, -0.44, 0.05));
+  return [th, kn];
+}
+const [shL, elL] = arm(-0.24), [shR, elR] = arm(0.24), [thL, knL] = leg(-0.09), [thR, knR] = leg(0.09);
+rig.traverse(o => { if (o.isMesh) o.castShadow = false; });
+
+// poses: each joint eases toward a target rotation; standing poses solve the legs so the feet stay planted on the deck
+const E = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z));
+const FIXED = {
+  prone: { yaw: 0, hy: 0.19, q: { hips: E(Math.PI / 2, 0, 0), torso: E(-0.28, 0, 0), head: E(-0.85, 0, 0), shL: E(0.4, 0, -0.25), elL: E(-0.3, 0, 0), shR: E(0.4, 0, 0.25), elR: E(-0.3, 0, 0), thL: E(0, 0, -0.06), knL: E(0.5, 0, 0), thR: E(0, 0, 0.06), knR: E(0.6, 0, 0) } },
+  sit: { yaw: 0, hy: 0.13, q: { hips: E(0, 0, 0), torso: E(0.12, 0, 0), head: E(-0.1, 0, 0), shL: E(-0.35, 0, -0.25), elL: E(-0.7, 0, 0), shR: E(-0.35, 0, 0.25), elR: E(-0.7, 0, 0), thL: E(-1.1, 0, -0.85), knL: E(1.3, 0, 0), thR: E(-1.1, 0, 0.85), knR: E(1.3, 0, 0) } },
+  sprawl: { yaw: 0, hy: 0.45, q: { hips: E(0.5, 0, 0.3), torso: E(0.5, 0.3, 0), head: E(0.3, 0, 0), shL: E(0, 0, -2.4), elL: E(-0.6, 0, 0), shR: E(0.3, 0, 2.3), elR: E(-0.4, 0, 0), thL: E(-0.8, 0, -0.5), knL: E(1, 0, 0), thR: E(-0.3, 0, 0.6), knR: E(0.7, 0, 0) } },
 };
-const cur = Object.assign({}, POSES.sit);
-function applyPose(name, dt, extra) {
-  const tgt = POSES[name], f = 1 - Math.exp(-dt * 12);
-  for (const k in tgt) cur[k] = lerp(cur[k], tgt[k], f);
-  body.rotation.y = cur.ry; hips.position.y = cur.hy; hips.rotation.x = cur.hrx; torso.rotation.x = cur.trx;
-  legL.rotation.set(cur.lx, 0, -cur.lz); legR.rotation.set(cur.lx, 0, cur.lz);
-  armL.rotation.set(cur.alx, 0, -cur.alz); armR.rotation.set(cur.arx, 0, cur.arz);
-  if (extra) extra();
+const STAND = {
+  stand: { hy: 0.8, lean: 0.3, twist: 0.4, arms: [E(-0.25, 0, -1.15), E(-0.5, 0, 0), E(0.25, 0, 1.05), E(-0.35, 0, 0)] },
+  crouch: { hy: 0.6, lean: 0.75, twist: 0.5, arms: [E(-0.7, 0, -0.75), E(-0.6, 0, 0), E(0.45, 0, 0.7), E(-0.5, 0, 0)] },
+  grab: { hy: 0.5, lean: 1.0, twist: 0.3, arms: [E(-0.5, 0, -1.4), E(-0.3, 0, 0), E(0.15, 0, 0.2), E(-0.15, 0, 0)] },
+};
+const L1 = 0.44, L2 = 0.44, DOWN = new THREE.Vector3(0, -1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _kq = new THREE.Quaternion();
+function solveLeg(hx, hy, fx, outT, outK) {
+  _a.set(fx - hx, 0.05 - (hy - 0.06), 0.03);                   // hip joint to foot
+  const D = clamp(_a.length(), 0.1, L1 + L2 - 0.005); _a.normalize();
+  const A = Math.acos(clamp((L1 * L1 + D * D - L2 * L2) / (2 * L1 * D), -1, 1));
+  _b.set(0, 0, 1).addScaledVector(_a, -_a.z).normalize();       // knees point the way the chest faces
+  _c.copy(_a).multiplyScalar(Math.cos(A)).addScaledVector(_b, Math.sin(A)).normalize();   // thigh direction
+  outT.setFromUnitVectors(DOWN, _c);
+  const kx = hx + _c.x * L1, ky = hy - 0.06 + _c.y * L1, kz = _c.z * L1;
+  _b.set(fx - kx, 0.05 - ky, 0.03 - kz).normalize();            // shin direction
+  _kq.setFromUnitVectors(DOWN, _b);
+  outK.copy(outT).invert().multiply(_kq);
+}
+const JNT = { hips, torso, head, shL, elL, shR, elR, thL, knL, thR, knR };
+const TGT = {}; for (const k in JNT) TGT[k] = new THREE.Quaternion();
+const _yawQ = new THREE.Quaternion(), UPV = new THREE.Vector3(0, 1, 0);
+let curHy = 0.13;
+function applyPose(name, dt, opt = {}) {
+  let hy, yaw;
+  if (STAND[name]) {
+    const p = STAND[name], s = opt.dir || 1, bob = opt.bob || 0;
+    hy = p.hy + bob; yaw = s * Math.PI / 2;
+    TGT.hips.set(0, 0, 0, 1); TGT.torso.copy(E(p.lean, -s * p.twist, 0)); TGT.head.copy(E(-p.lean * 0.6, -s * p.twist * 0.8, 0));
+    [TGT.shL, TGT.elL, TGT.shR, TGT.elR].forEach((q, i) => q.copy(p.arms[i]));
+    solveLeg(-0.09, hy, -s * 0.34, TGT.thL, TGT.knL);
+    solveLeg(0.09, hy, s * 0.3, TGT.thR, TGT.knR);
+  } else {
+    const p = FIXED[name]; hy = p.hy; yaw = p.yaw;
+    for (const k in p.q) TGT[k].copy(p.q[k]);
+  }
+  if (opt.stroke !== undefined) { TGT.shL.copy(E(opt.stroke, 0, -0.2)); TGT.shR.copy(E(opt.stroke + Math.PI, 0, 0.2)); TGT.elL.copy(E(-0.2, 0, 0)); TGT.elR.copy(E(-0.2, 0, 0)); }
+  const f = 1 - Math.exp(-dt * (opt.stroke !== undefined ? 30 : 12));
+  curHy = lerp(curHy, hy, f); hips.position.y = curHy;
+  body.quaternion.slerp(_yawQ.setFromAxisAngle(UPV, yaw), f);
+  for (const k in JNT) JNT[k].quaternion.slerp(TGT[k], f);
 }
 
 // ------------------------------------------------------------------ input
@@ -618,7 +708,13 @@ function lineupUpdate(dt, k) {
   const st = (k.left ? 1 : 0) - (k.right ? 1 : 0);
   if (k.up || k.down) { P.sit = false; P.idle = 0; } else P.idle += dt;
   if (P.idle > 1.4 && !P.caught) P.sit = true;
-  P.yaw += st * (P.sit ? 2.2 : 1.5) * dt;
+  P.yaw += st * (P.sit ? 2.4 : 1.8) * dt;
+  // holding UP with a wave on the way swings you round to face the beach for you
+  const inc0 = incoming();
+  if (k.up && !st && inc0 && inc0.eta < 6 && inc0.p.b < 0.5) {
+    const dy = Math.atan2(Math.sin(-P.yaw), Math.cos(-P.yaw));
+    P.yaw += clamp(dy, -3 * dt, 3 * dt);
+  }
   P.dive = Math.max(0, P.dive - dt); P.diveCD -= dt;
   const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
   const uz = waterVel(P.x, P.z);
@@ -630,7 +726,7 @@ function lineupUpdate(dt, k) {
   const fw2 = fw * (1 - Math.min(1, fd * dt)); lx *= 1 - Math.min(1, ld * dt); lz *= 1 - Math.min(1, ld * dt);
   P.vx = fx * fw2 + lx; P.vz = uz + fz * fw2 + lz;
   P.fwd = fw2 * fz;                                             // your own paddling speed toward the beach
-  const slopeK = P.sit ? 1.2 : 2.6, thrust = k.up && P.dive <= 0 ? 1.75 : 0;
+  const slopeK = P.sit ? 1.2 : 2.8, thrust = k.up && P.dive <= 0 ? 2.1 : 0;
   P.vx += (-slopeK * gx + thrust * fx) * dt; P.vz += (-slopeK * gz + thrust * fz) * dt;
   if (k.down) { P.vx *= 1 - 1.5 * dt; P.vz = uz + (P.vz - uz) * (1 - 1.5 * dt); }
   P.vz = Math.min(P.vz, spot.c * 1.15);                         // lying down you can't outrun the wave
@@ -641,9 +737,9 @@ function lineupUpdate(dt, k) {
   for (const w of waves) {
     if (w.A < 0.6) continue;
     const p = profile(w, P.x, P.z);
-    if (p.d > 0 && p.d < p.wf && Math.abs(P.x - w.xp) - w.e > 2.5 && w.fk < 2.3) onFace = { w, p };   // open face, not the broken part
+    if (p.d > 0 && p.d < p.wf * 1.4 && Math.abs(P.x - w.xp) - w.e > 0.5 && w.fk < 2.3) onFace = { w, p };   // open face, not the broken part
     // whitewater rolling over you
-    if (p.b > 0.5 && p.d > -0.4 && p.d < p.wf * 1.7) {
+    if (p.b > 0.5 && p.d > -0.4 && p.d < p.wf * 1.7 && !fadeCb) {
       if (P.dive > 0) P.vz = Math.max(P.vz, 0.6);
       else return washed();
     }
@@ -656,10 +752,10 @@ function lineupUpdate(dt, k) {
   if (P.caught) {
     P.caught.t -= dt;
     if (actEdge) { actEdge = false; return popUp(); }
-    if (P.caught.t <= 0) { P.caught = null; popup('PEARLED!', rigPos(), 'bad', 'press SPACE when it picks you up'); return washed(true); }
+    if (P.caught.t <= 0) return popUp();                          // you stand up on your own; SPACE just does it sooner
     if (!onFace || onFace.w !== P.caught.w) P.caught = null;
-  } else if (onFace && !P.sit && P.padRun > 0.8 && fz > 0.5 && P.vz > spot.c * 0.86 && onFace.p.d < onFace.p.wf * 0.8) {
-    P.caught = { w: onFace.w, t: 1.25 };
+  } else if (onFace && !P.sit && P.padRun > 0.35 && fz > 0.3 && P.vz > spot.c * 0.72) {
+    P.caught = { w: onFace.w, t: 0.45 };
     blip(330, 660, 0.15, 0.06, 'triangle');
   }
   if (actEdge) { actEdge = false; if (!P.caught && P.diveCD <= 0) { P.dive = 0.9; P.diveCD = 1.6; splashSound(0.15, 0.3); } }
@@ -668,7 +764,7 @@ function lineupUpdate(dt, k) {
   if (P.z < -30) { P.z = -30; P.vz = Math.max(P.vz, 0); }
 }
 function washed(pearl) {
-  P.mode = 'washed'; P.washT = 1.7; P.caught = null; P.dive = 0;
+  P.mode = 'washed'; P.washT = 1.0; P.caught = null; P.dive = 0;
   const p = rigPos();
   for (let i = 0; i < 50; i++) spray(p.x + rnd(-1, 1), p.y, p.z + rnd(-1, 1), rnd(-2, 2), rnd(2, 6), rnd(0, 4), rnd(0.5, 1.1));
   splashSound(0.5, 0.9); shake(0.25);
@@ -700,28 +796,32 @@ function rideUpdate(dt, k) {
   if (w.zc > Z_SHORE - 6 || amp < 0.75) return kickOut();
   const steep = Math.pow(Math.sin(Math.PI * clamp(P.h, 0, 1)), 0.7);
   const st = (k.right ? 1 : 0) - (k.left ? 1 : 0), up = -st * P.dir;   // which screen side the face is on flips with direction
-  const turn = 200 - clamp(P.s - 8, 0, 10) * 6;
+  const turn = 170 - clamp(P.s - 8, 0, 10) * 4;
   if (up) P.a += up * turn * dt;
-  else P.a -= Math.sign(P.a) * Math.min(Math.abs(P.a), 75 * dt);
-  P.a = clamp(P.a, -65, 65);
+  else {
+    // hands off: the board settles into a line across the middle of the face
+    const want = clamp((0.55 - P.h) * 110, -28, 28);
+    P.a += clamp(want - P.a, -120 * dt, 120 * dt);
+  }
+  P.a = clamp(P.a, -60, 60);
   P.lean = lerp(P.lean, up, 1 - Math.exp(-dt * 6));
   const ar = P.a * Math.PI / 180, sa = Math.sin(ar), ca = Math.cos(ar);
   P.s -= 7.5 * sa * (0.35 + 0.65 * steep) * dt;                 // dropping speeds you up, climbing costs speed
-  P.s += 2.8 * steep * pow * dt;                                 // the breaking wave drives you along
+  P.s += 3.6 * steep * pow * dt;                                 // the breaking wave drives you along
   if (k.up) P.s += (2.2 + 2.2 * steep * pow) * (sa < 0 ? 1.35 : 1) * dt;
   if (k.down) P.s -= 6.8 * dt;
-  if (dc < tl * 0.3) P.s += 1.6 * dt;                           // the foam ball shoves you forward
+  if (dc < tl * 0.9) P.s += (dc < 1.5 ? 10 : 4) * dt;          // the foam ball shoves you forward, hard when it's right on you
   P.s -= (P.s * 0.17 + (P.h < 0.1 ? 2.2 : 0)) * dt;
-  P.s = clamp(P.s, 2.7, 20);
+  P.s = clamp(P.s, 5, 20);
   P.h += P.s * sa / Lf * dt;
   P.x += P.dir * P.s * ca * dt;
   P.low = k.up || k.down || P.tubeT > 0;
   if (P.h <= 0) { P.h = 0; if (P.a < 0) { if (!P.bottom) P.s *= 1 - 0.18 * (-P.a / 65); P.a = 0; } P.bottom = true; } else if (P.h > 0.05) P.bottom = false;
   if (P.h >= 1) {
-    if (P.s * sa > 6.3) return launch(sa, ca);
+    if (P.s * sa > 5.8) return launch(sa, ca);
     P.h = 1; P.a = Math.min(P.a, P.floatT > 0.9 ? -25 : 6);
   }
-  if (dc < 0.6) return wipe('CAUGHT BY THE LIP');
+  if (dc < -1.2) return wipe('CAUGHT BY THE LIP');
   const pos = rigPos();
   // snap off the top, or carve across the middle of the face
   if (P.a > 20) P.snapArm = 0.45;
@@ -779,15 +879,16 @@ function airUpdate(dt, k, dc) {
   P.avy -= 22 * dt; P.ay += P.avy * dt;
   const s = (k.right ? 1 : 0) - (k.left ? 1 : 0);
   if (s) { P.ang += s * 640 * dt; P.spin += s * 640 * dt; }
+  else { const r = Math.round(P.ang / 360) * 360; P.ang += clamp(r - P.ang, -360 * dt, 360 * dt); }   // let go and the board squares up for landing
   P.grabbing = k.up || k.down;
   if (P.grabbing) { P.grabT += dt; if (!P.grab) P.grab = k.up ? 'INDY' : 'TAIL GRAB'; }
-  if (dc < 0.8) return wipe('SWALLOWED');
+  if (dc < -1.5) return wipe('SWALLOWED');
   const L = heightAt(P.ax, faceZ(w, P.ax, 0.97));
   if (P.avy < 0 && P.ay <= L) land();
 }
 function land() {
   const a = ((P.ang % 360) + 540) % 360 - 180;
-  if (Math.abs(a) > 55) { P.x = P.ax; P.air = false; return wipe(Math.abs(P.spin) > 180 ? 'OVER-ROTATED' : 'BAD LANDING'); }
+  if (Math.abs(a) > 85) { P.x = P.ax; P.air = false; return wipe(Math.abs(P.spin) > 180 ? 'OVER-ROTATED' : 'BAD LANDING'); }
   P.air = false; P.x = P.ax; P.h = 0.95;
   const vh = Math.abs(P.avx);
   P.a = -clamp(Math.atan2(-P.avy, vh) * 180 / Math.PI, 20, 60);
@@ -897,7 +998,7 @@ function update(dt) {
     if (P.mode === 'lineup') lineupUpdate(dt, k);
     else if (P.mode === 'washed') {
       P.washT -= dt; P.vz = spot.c * 0.9 * clamp(P.washT, 0, 1); P.z += P.vz * dt;
-      if (P.washT <= 0) { P.mode = 'lineup'; P.yaw = Math.PI; P.sit = true; P.idle = 2; P.vx = P.vz = 0; }
+      if (P.washT <= 0) { P.mode = 'lineup'; P.yaw = Math.PI; P.sit = true; P.idle = 2; P.vx = P.vz = 0; if (P.z > Z_LINEUP + 6) toLineup('BACK OUT TO THE LINEUP'); }
     } else if (P.mode === 'ride') rideUpdate(dt, k);
     else if (P.mode === 'kick') { P.endT -= dt; P.s *= 1 - 1.5 * dt; P.x += P.dir * P.s * dt * 0.5; P.h = Math.max(0, P.h - dt * 0.6); if (P.endT <= 0 && !fadeCb) { endRide(); toLineup(); } }
     else if (P.mode === 'wipe') {
@@ -916,7 +1017,11 @@ function update(dt) {
       buildLip(lips[li++], w, sgn);
       const xe = w.xp + sgn * w.e, a = ampAt(w, xe), y0 = heightAt(xe, w.zc);
       if (Math.random() < dt * 40) spray(xe - sgn * rnd(0, 1.5), y0 - a * rnd(0.6, 1), w.zc + a * rnd(1.4, 1.9), rnd(-1, 1), rnd(2, 6), rnd(0.5, 3), rnd(0.5, 1.1));
-      if (Math.random() < dt * 25) { const xb = xe - sgn * rnd(2, 25); spray(xb, heightAt(xb, w.zc + 1) + 0.3, w.zc + rnd(0, 2), rnd(-1, 1), rnd(1, 3), rnd(1, 3), rnd(0.4, 0.9)); }
+      for (let i = 0; i < 2; i++) if (Math.random() < dt * 25) { const xb = xe - sgn * rnd(2, 25); spray(xb, heightAt(xb, w.zc + 1) + 0.3, w.zc + rnd(0, 2), rnd(-1, 1), rnd(1, 4), rnd(1, 3), rnd(0.4, 1)); }
+      // water pouring off the edge of the throwing lip
+      if (Math.random() < dt * 30) { const k = Math.random(), xl = xe + sgn * k * tubeLen(w) * 0.8, al = ampAt(w, xl) * Math.pow(1 - k, 0.75); spray(xl, heightAt(xl, w.zc) - al, w.zc + al * 1.8, rnd(-0.3, 0.3), rnd(-1, 0.5), rnd(0, 1), rnd(0.3, 0.6)); }
+      // offshore wind blows spray back off the crest of the open face
+      if (Math.random() < dt * 22) { const xo = xe + sgn * rnd(1, 30), yo = heightAt(xo, w.zc); spray(xo, yo + 0.1, w.zc - 0.2, rnd(-0.5, 0.5), rnd(1.5, 3.5), rnd(-6, -3), rnd(0.5, 1)); }
     }
   }
   for (; li < lips.length; li++) lips[li].m.visible = false;
@@ -945,7 +1050,7 @@ function placeSurfer(dt) {
       orient(_fw, _u.set(0, 1, 0), _q);
       _q2.setFromAxisAngle(_n.set(0, 1, 0), -P.ang * Math.PI / 180); _q.premultiply(_q2);
       rig.quaternion.copy(_q);
-      applyPose(P.grabbing ? 'grab' : 'crouch', dt);
+      applyPose(P.grabbing ? 'grab' : 'crouch', dt, { dir: P.dir });
     } else {
       // travel direction along the face from a small step forward
       const d = 0.25, ar = P.a * Math.PI / 180, x1 = P.x + P.dir * Math.cos(ar) * d, z1 = faceZ(P.w, x1, P.h + Math.sin(ar) * d / 4);
@@ -954,7 +1059,7 @@ function placeSurfer(dt) {
       orient(_fw, _n, _q);
       _q2.setFromAxisAngle(_f, -P.lean * 0.35); _q.premultiply(_q2);
       rig.quaternion.slerp(_q, 1 - Math.exp(-dt * 14));
-      applyPose(P.mode === 'kick' ? 'stand' : P.low ? 'crouch' : 'stand', dt);
+      applyPose(P.mode === 'kick' ? 'stand' : P.low ? 'crouch' : 'stand', dt, { dir: P.dir, bob: P.mode === 'kick' ? 0 : Math.sin(T * 6) * 0.015 - Math.abs(P.lean) * 0.08 });
     }
   } else if (P.mode === 'wipe') {
     rig.rotation.x += dt * 7; rig.rotation.z += dt * 4;
@@ -966,9 +1071,7 @@ function placeSurfer(dt) {
     if (P.mode === 'washed') { _q2.setFromAxisAngle(_f, Math.sin(T * 9) * 0.8); _q.premultiply(_q2); }
     rig.quaternion.slerp(_q, 1 - Math.exp(-dt * 8));
     const prone = !P.sit || P.caught;
-    applyPose(P.mode === 'washed' ? 'sprawl' : prone ? 'prone' : 'sit', dt, () => {
-      if (prone && keys.up && P.mode === 'lineup') { armL.rotation.set(P.stroke, 0, -0.25); armR.rotation.set(P.stroke + Math.PI, 0, 0.25); }
-    });
+    applyPose(P.mode === 'washed' ? 'sprawl' : prone ? 'prone' : 'sit', dt, prone && keys.up && P.mode === 'lineup' ? { stroke: P.stroke } : {});
   }
 }
 function placeCamera(dt) {
@@ -1010,15 +1113,14 @@ function updatePrompts() {
   if (state !== 'play') return;
   if (fadeCb) return setPrompt('');
   if (P.mode === 'lineup') {
-    if (P.caught) return setPrompt('POP UP!', 'press SPACE', true, clamp(P.caught.t / 1.25, 0, 1));
+    if (P.caught) return setPrompt('GOT IT!', 'standing up · SPACE to pop up now', true);
     const inc = incoming();
     if (inc && inc.p.b > 0.5 && inc.eta < 2.5) return setPrompt('WHITEWATER', 'SPACE to duck dive under it', inc.eta < 1);
     if (inc && inc.eta < 7 && inc.eta > -0.5 && inc.p.b < 0.5) {
       const facing = Math.cos(P.yaw) > 0.5, side = inc.w.xp - P.x;
       const peak = Math.abs(side) < 4 ? 'the peak is right here' : `the peak is ${Math.round(Math.abs(side))}m to your ${(side > 0) === facing ? 'left' : 'right'}`;
-      if (!facing) return setPrompt('WAVE COMING · TURN AROUND', 'face the beach · ' + peak, inc.eta < 3.5);
-      if (inc.eta > 2) return setPrompt('GET READY', 'start paddling when the bar fills · ' + peak, false, 1 - clamp((inc.eta - 2) / 5, 0, 1));
-      return setPrompt(keys.up ? 'PADDLE! PADDLE!' : 'PADDLE NOW · HOLD UP', peak, true, clamp(inc.eta / 2, 0, 1));
+      if (inc.eta > 2.5) return setPrompt(facing ? 'GET READY' : 'WAVE COMING', 'hold UP when the bar fills · ' + peak, false, 1 - clamp((inc.eta - 2.5) / 4.5, 0, 1));
+      return setPrompt(keys.up ? 'PADDLE! KEEP HOLDING UP' : 'HOLD UP TO PADDLE IN', facing ? peak : 'holding UP turns you to the beach', true, clamp(inc.eta / 2.5, 0, 1));
     }
     if (G.time <= 0) return setPrompt('HEAT OVER');
     return setPrompt(Math.cos(P.yaw) > 0.5 ? 'WAITING FOR A SET' : 'WATCHING FOR A SET', 'sets roll in from the horizon');
@@ -1046,7 +1148,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__swell = { get G() { return G; }, get P() { return P; }, get state() { return state; }, waves, keys, start, update, frame, heightAt, profile, setSpot, incoming, rigPos, press: () => { actEdge = true; } };
+window.__swell = { get G() { return G; }, get P() { return P; }, get state() { return state; }, waves, keys, start, update, frame, heightAt, profile, setSpot, incoming, rigPos, rig, camera, render: () => renderer.render(scene, camera), press: () => { actEdge = true; } };
 </script>
 </body>
 </html>
