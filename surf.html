@@ -860,7 +860,7 @@ function gameOver() {
   const s = heatScore(), nb = s > best;
   if (nb) { best = s; try { localStorage.setItem('swellrider3d.best', String(s)); } catch (e) { } }
   $('overT').textContent = nb && s > 0 ? 'NEW BEST HEAT!' : 'HEAT OVER';
-  $('overP').innerHTML = `Heat score <b style="color:var(--sun)">${s.toLocaleString('en-US')}</b> from your best two waves at ${spot.name}` + (nb ? '' : `<br>Best heat ${Math.floor(best).toLocaleString('en-US')}`);
+  $('overP').innerHTML = `Heat score <b style="color:var(--sun)">${s.toLocaleString('en-US')}</b> from your best two waves at ${spot.name}` + (nb || !best ? '' : `<br>Best heat ${Math.floor(best).toLocaleString('en-US')}`);
   const top = topTwo().slice();
   $('rides').innerHTML = G.rides.length ? G.rides.map((r, i) => { const j = top.indexOf(r.pts), v = r.pts.toLocaleString('en-US'); if (j >= 0) { top.splice(j, 1); return `Wave ${i + 1}: <b>${v}</b>`; } return `Wave ${i + 1}: ${v}`; }).join('<br>')
     : 'No waves caught. Face the beach and paddle before the wave reaches you.';
