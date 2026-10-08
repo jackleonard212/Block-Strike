@@ -18,8 +18,9 @@ A session lasts three minutes and your best two runs count. Pick one of four bea
 - When the bar fills, hold **Up** (or W) to sprint at the water. Holding Up also points you at the sea; **Left / Right** (A / D) steer.
 - The board drops itself as soon as your feet hit the wash. **Space** drops it sooner, but dry sand stops it dead.
 - Skim out to the incoming wave. **Left / Right** steer and **Up** pumps for speed.
-- Press **S** (or Down) to **slash**: a hard snap turn that throws a wall of spray. Slashes on the wave face score more (wave slash, lip slash), and quick chains become double and triple slashes.
-- Press **Space** while skimming for a **shuv-it**: the board pops round 180 under your feet.
+- Press **Space** to **slash**: the board swings sideways across your line and skids, throwing a wall of spray. Hold Space to keep power-sliding. Slashes on the wave face score more (wave slash, lip slash), and quick chains become double and triple slashes.
+- Press **S** (or Down) while skimming for a **shuv-it**: the board pops round 180 under your feet.
+- **Barrels:** once a wave starts breaking, turn and ride along its face just ahead of the curl. The wave carries you along, the lip throws over you, and the camera tucks in. Keep your speed up to get spat out for a bonus; if the curl catches you, the barrel is shut down but still scores.
 - Ride up the wave face and turn back toward the beach for a **wrap**, or hit the lip fast to launch. In the air, **Left / Right** spin, **Space** shuvs the board round under you, and **Up / Down** grab (both together for a method). A skimboard has no nose or tail, so any multiple of 180 lands; let go and the board squares up. Tricks combine, like AIR 360 SHUV-IT INDY.
 - The run ends when you stop. Skim distance, wraps and airs all score, and tricks build a combo multiplier. Slow down out in deep water and you sink.
 - On phones, on-screen buttons appear at the bottom.
