@@ -108,7 +108,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
   <h1>SKIM RIDER</h1>
   <p>Sprint down the beach, throw your board onto the wash and skim out to meet the shorebreak. A session lasts three minutes and your best two runs count.</p>
   <div class="spots" id="spots"></div>
-  <p class="keys">Hold UP to sprint at the water · the board drops itself on the wash (SPACE drops it sooner)<br>LEFT / RIGHT steer · ride up the wave face and turn back for a WRAP<br>Hit the lip fast to launch · in the air LEFT / RIGHT spin, UP / DOWN grab · any multiple of 180 lands</p>
+  <p class="keys">Hold UP to sprint at the water · the board drops itself on the wash (SPACE drops it sooner)<br>Skimming: LEFT / RIGHT steer · S or DOWN slash · SPACE shuv-it · ride up the face and turn back for a WRAP<br>Hit the lip fast to launch · in the air LEFT / RIGHT spin, SPACE shuv the board, UP / DOWN grab (both for a METHOD)</p>
   <button class="go" id="play" type="button">HIT THE BEACH</button>
 </div>
 <div id="over" class="ov" hidden>
@@ -120,7 +120,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
 <div id="paused" class="ov" hidden><h2>PAUSED</h2><p>Press P or tap to keep skimming</p></div>
 <div id="touch">
   <div class="grp"><button data-k="left" type="button">◀<small>LEFT</small></button><button data-k="right" type="button">▶<small>RIGHT</small></button></div>
-  <div class="grp"><button data-k="act" type="button">●<small>DROP</small></button><button data-k="down" type="button">▼<small>CARVE</small></button><button data-k="up" type="button">▲<small>RUN</small></button></div>
+  <div class="grp"><button data-k="act" type="button">●<small>DROP / SHUV</small></button><button data-k="down" type="button">▼<small>SLASH</small></button><button data-k="up" type="button">▲<small>RUN</small></button></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -141,16 +141,16 @@ const sw = { run: ZS - 2, target: ZS - 2, phase: 'back', hold: 0, wet: ZS };   /
 
 // ------------------------------------------------------------------ surf spots
 const SPOTS = [
-  { name: 'SUNSET BEACH', sub: 'mellow shorebreak, long wash', H: 1.3, c: 3.2, peel: 14, hollow: 1.25, chop: 0.08,
+  { name: 'SUNSET BEACH', sub: 'punchy shorebreak, long wash', H: 2.0, c: 3.3, peel: 14, hollow: 1.25, chop: 0.08,
     skyTop: '#2c2150', skyMid: '#b8607e', horizon: '#ffc493', sun: '#fff0c8', sunDir: [0.35, 0.12, -0.93],
     deep: '#16465e', shal: '#23798a', face: '#62c9b6', foam: '#ffffff', fog: '#e7a98c', hill: '#4b3a6c', sand: '#e0b07a', light: '#ffd7b0', amb: '#7a5a92' },
-  { name: 'GLASS COVE', sub: 'steep, clear wedges', H: 1.6, c: 3.5, peel: 18, hollow: 1.0, chop: 0.03,
+  { name: 'GLASS COVE', sub: 'steep, clear wedges', H: 2.5, c: 3.6, peel: 18, hollow: 1.0, chop: 0.03,
     skyTop: '#2a6fc9', skyMid: '#7db8ea', horizon: '#d8eefa', sun: '#ffffff', sunDir: [-0.3, 0.7, -0.65],
     deep: '#0e7590', shal: '#1fb2c0', face: '#86f2e2', foam: '#ffffff', fog: '#cfe8f5', hill: '#2c8a66', sand: '#f4e3b8', light: '#ffffff', amb: '#8cc2e0' },
-  { name: 'STORM SHORE', sub: 'heavy dumping close-outs', H: 1.9, c: 3.7, peel: 16, hollow: 1.15, chop: 0.2, rain: true, noSun: true,
+  { name: 'STORM SHORE', sub: 'heavy dumping close-outs', H: 2.9, c: 3.8, peel: 16, hollow: 1.15, chop: 0.2, rain: true, noSun: true,
     skyTop: '#23282e', skyMid: '#3f474d', horizon: '#5d666a', sun: '#9aa4a8', sunDir: [0.2, 0.6, -0.75],
     deep: '#1a2e2d', shal: '#2a4b45', face: '#4f7f6f', foam: '#e6ece8', fog: '#4b5357', hill: '#20252a', sand: '#7a7464', light: '#c0c8cc', amb: '#4a5458' },
-  { name: 'MOONLIGHT SANDS', sub: 'small, glassy, glowing foam', H: 1.1, c: 3.1, peel: 12, hollow: 1.2, chop: 0.04, night: true,
+  { name: 'MOONLIGHT SANDS', sub: 'glassy, glowing foam', H: 1.7, c: 3.2, peel: 12, hollow: 1.2, chop: 0.04, night: true,
     skyTop: '#03051a', skyMid: '#0d1640', horizon: '#26346a', sun: '#e9e6ff', sunDir: [-0.4, 0.3, -0.87],
     deep: '#081a46', shal: '#16397a', face: '#3f8fd4', foam: '#8ff0ff', fog: '#151f48', hill: '#0b0e24', sand: '#4a4c6e', light: '#a9b4ff', amb: '#26306a' },
 ];
@@ -372,7 +372,7 @@ for (let i = 0; i < RAIN; i++) { rainPos[i * 6] = rnd(-30, 30); rainPos[i * 6 + 
 const NP = 2400, pGeo = new THREE.BufferGeometry(), pPos = new Float32Array(NP * 3).fill(-999), pVel = new Float32Array(NP * 3), pLife = new Float32Array(NP);
 pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
 const dotTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); const r = g.createRadialGradient(16, 16, 0, 16, 16, 16); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.5, 'rgba(255,255,255,.8)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
-const pMat = new THREE.PointsMaterial({ size: 0.28, map: dotTex, transparent: true, depthWrite: false, color: 0xffffff });
+const pMat = new THREE.PointsMaterial({ size: 0.34, map: dotTex, transparent: true, depthWrite: false, color: 0xffffff });
 const points = new THREE.Points(pGeo, pMat); points.frustumCulled = false; scene.add(points);
 let pI = 0;
 function spray(x, y, z, vx, vy, vz, life) {
@@ -624,12 +624,12 @@ $('spots').querySelectorAll('button').forEach(b => b.onclick = () => setSpot(+b.
 // ------------------------------------------------------------------ game state
 let state = 'title', paused = false, G = null, P = null;
 let best = 0; try { best = +localStorage.getItem('skimrider.best') || 0; } catch (e) { }
-const HEAT = 180, START_Z = ZS + 13;
+const HEAT = 180, START_Z = ZS + 14;
 function newGame() { G = { time: HEAT, runs: [], mult: 1, multT: 0, run: 0, nextWave: 2, shake: 0, flash: 0 }; }
 function newRider() {
   P = { mode: 'ready', x: rnd(-3, 3), z: START_Z, y: sandY(START_Z), v: 0, yaw: Math.PI, vy: 0, yPrev: sandY(START_Z),
     air: false, airT: 0, spin: 0, ang: 0, grab: '', grabT: 0, grabbing: false, maxH: 0, phase: 0,
-    skimDist: 0, wrapArm: 0, waveH: 0, endT: 0, wipeT: 0, lean: 0, low: false, readyT: 0, dropNote: '' };
+    skimDist: 0, wrapArm: 0, waveH: 0, slashT: 0, slashCD: 0, slashChain: 0, slashLast: -9, slashDir: 1, downWas: false, shuv: 0, shuvTo: 0, shuvCD: 0, airShuv: 0, endT: 0, wipeT: 0, lean: 0, low: false, readyT: 0, dropNote: '' };
 }
 function spawnWave() {
   if (waves.length >= MAXW) return;
@@ -679,11 +679,15 @@ function waterPush(x, z) {
 
 // ------------------------------------------------------------------ hud
 const popsEl = $('pops');
+let popStack = [];
 const _v = new THREE.Vector3();
 function popup(text, pos, cls = '', sub = '') {
   const el = document.createElement('div'); el.className = 'pop ' + cls;
   let x = 50, y = 38;
   if (pos) { _v.copy(pos).project(camera); x = clamp((_v.x + 1) * 50, 12, 88); y = clamp((1 - _v.y) * 50, 18, 80); }
+  // stack popups that land close together so they don't print over each other
+  const now = performance.now(); popStack = popStack.filter(t => now - t < 700);
+  if (cls !== 'big') { y = Math.max(14, y - popStack.length * 9); popStack.push(now); }
   el.style.left = x + '%'; el.style.top = y + '%';
   el.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   popsEl.appendChild(el); setTimeout(() => el.remove(), 1450);
@@ -767,18 +771,26 @@ function drop(g) {
   splashSound(0.25, 0.4); blip(330, 660, 0.12, 0.05, 'triangle');
 }
 function skimUpdate(dt, k) {
+  const downEdge = k.down && !P.downWas; P.downWas = k.down;
+  P.slashCD -= dt; P.shuvCD -= dt;
+  P.shuv += clamp(P.shuvTo - P.shuv, -900 * dt, 900 * dt);       // the board spinning under your feet
   if (P.air) return airUpdate(dt, k);
   const st = (k.left ? 1 : 0) - (k.right ? 1 : 0);
-  const turn = (2.6 + clamp(4 - P.v, 0, 4) * 0.35) * (k.down ? 1.5 : 1);
+  const turn = (2.6 + clamp(4 - P.v, 0, 4) * 0.35) * (k.down ? 1.3 : 1);
   P.yaw += st * turn * dt;
-  P.lean = lerp(P.lean, st, 1 - Math.exp(-dt * 6));
-  P.low = k.down || k.up || Math.abs(P.lean) > 0.5;
+  // S / DOWN: slash — whip the board sideways and throw a wall of spray
+  if (downEdge && P.slashCD <= 0 && P.v > 2.5) slash(st);
+  if (P.slashT > 0) { P.slashT -= dt; P.yaw += P.slashDir * 3.2 * dt * (P.slashT > 0.15 ? 1 : -0.4); }
+  // SPACE: shuv-it — pop the board round 180 under you and keep skimming
+  if (actEdge && P.shuvCD <= 0 && P.v > 2) { actEdge = false; shuvIt(); }
+  P.lean = lerp(P.lean, P.slashT > 0 ? P.slashDir * 1.6 : st, 1 - Math.exp(-dt * (P.slashT > 0 ? 14 : 6)));
+  P.low = k.down || k.up || Math.abs(P.lean) > 0.5 || P.shuvCD > 0.9;
   const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
   const g0 = ground(P.x, P.z), e = 0.3;
   const gx = (ground(P.x + e, P.z).y - g0.y) / e, gz = (ground(P.x, P.z + e).y - g0.y) / e;
   P.v += (-8.5 * (gx * fx + gz * fz) + (k.up ? 2.2 : 0)) * dt;    // uphill slows you, downhill speeds you up
   const fr = g0.kind === 'film' ? 0.09 * P.v + 0.3 : g0.kind === 'sea' ? 0.26 * P.v + 0.8 : g0.kind === 'wet' ? 0.5 * P.v + 1.4 : 2.5 * P.v + 4;
-  P.v -= (fr + (k.down ? 2.5 : 0)) * dt;
+  P.v -= (fr + (k.down ? 1.2 : 0)) * dt;
   // whitewater: slows you and shoves you up the beach
   let foam = 0;
   for (const w of waves) { if (w.A < 0.05) continue; const p = profile(w, P.x, P.z); if (p.b > 0.5 && p.d > -0.6 && p.d < p.wf * 1.8) foam = Math.max(foam, p.b); }
@@ -810,14 +822,36 @@ function skimUpdate(dt, k) {
   if (P.v < 0.7) return endRun(g.kind === 'sea' ? 'SANK' : '', '');
   if (g.kind === 'sea' && P.v < 2.2 && !wv) return endRun('SANK', 'keep your speed up out in the deep water');
 }
+function slash(st) {
+  const g = ground(P.x, P.z), wv = waveUnder(P.x, P.z), pos = rigPos();
+  P.slashDir = st || (Math.sin(T * 13) > 0 ? 1 : -1);
+  P.slashT = 0.32; P.slashCD = 0.45; P.v *= 0.88;
+  P.slashChain = T - P.slashLast < 1.6 ? P.slashChain + 1 : 1; P.slashLast = T;
+  const onFace = wv && g.y > 0.5, high = onFace && g.y > 1.3;
+  const chain = ['', '', 'DOUBLE ', 'TRIPLE ', 'MEGA '][Math.min(P.slashChain, 4)];
+  const name = chain + (high ? 'LIP SLASH' : onFace ? 'WAVE SLASH' : 'SLASH');
+  award(name, (high ? 260 : onFace ? 170 : 70) + P.v * 8 + (P.slashChain - 1) * 60, onFace || P.slashChain > 1, pos);
+  // a fan of spray thrown off the rail
+  const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw), sx = fz * P.slashDir, sz = -fx * P.slashDir;
+  for (let i = 0; i < (onFace ? 140 : 90); i++) { const a = rnd(0.4, 1.4); spray(pos.x + sx * 0.3, pos.y + 0.1, pos.z + sz * 0.3, sx * a * rnd(3, 8) - fx * rnd(0, 2), rnd(2, onFace ? 9 : 6), sz * a * rnd(3, 8) - fz * rnd(0, 2), rnd(0.5, 1.2)); }
+  splashSound(0.35, 0.45); blip(300, 700, 0.09, 0.04); shake(onFace ? 0.12 : 0.05);
+}
+function shuvIt() {
+  const g = ground(P.x, P.z), wv = waveUnder(P.x, P.z), pos = rigPos();
+  P.shuvTo += 180; P.shuvCD = 1.1; P.v *= 0.93;
+  const onFace = wv && g.y > 0.5;
+  award(onFace ? 'WAVE SHUV-IT' : 'SHUV-IT', onFace ? 240 : 110, true, pos);
+  for (let i = 0; i < 30; i++) spray(pos.x, pos.y + 0.05, pos.z, rnd(-2, 2), rnd(1, 3), rnd(-2, 2), rnd(0.3, 0.6));
+  blip(520, 1040, 0.1, 0.05, 'triangle');
+}
 function waveUnder(x, z) {
   for (const w of waves) { if (w.A < 0.35) continue; const p = profile(w, x, z); if (p.d > -0.3 && p.d < p.wf * 1.1 && p.b < 0.6) return { w, p }; }
   return null;
 }
 function launch(vyS) {
   const pos = rigPos();
-  P.air = true; P.airT = 0; P.spin = 0; P.ang = 0; P.grab = ''; P.grabT = 0; P.grabbing = false; P.maxH = P.y;
-  P.vy = clamp(vyS * 0.45 + 2.5, 3.5, 7.5);
+  P.air = true; P.airT = 0; P.spin = 0; P.ang = 0; P.grab = ''; P.grabT = 0; P.grabbing = false; P.maxH = P.y; P.airShuv = 0;
+  P.vy = clamp(vyS * 0.45 + 2.8, 4, 8.5);
   // the pitching lip throws you up and back toward the beach
   P.ax = Math.sin(P.yaw) * P.v * 0.6; P.az = spot.c * 1.15 + 0.8;
   for (let i = 0; i < 40; i++) spray(pos.x, pos.y, pos.z, rnd(-2, 2), rnd(2, 6), rnd(-2, 2), rnd(0.4, 0.9));
@@ -829,7 +863,9 @@ function airUpdate(dt, k) {
   if (s) { P.ang += s * 560 * dt; P.spin += s * 560 * dt; }
   else { const r = Math.round(P.ang / 180) * 180; P.ang += clamp(r - P.ang, -360 * dt, 360 * dt); }   // let go and the board squares up
   P.grabbing = k.up || k.down;
-  if (P.grabbing) { P.grabT += dt; if (!P.grab) P.grab = k.up ? 'INDY' : 'TAIL GRAB'; }
+  if (P.grabbing) { P.grabT += dt; const gname = k.up && k.down ? 'METHOD' : k.up ? 'INDY' : 'TAIL GRAB'; if (!P.grab || gname === 'METHOD') P.grab = gname; }
+  // SPACE in the air: kick the board round under you
+  if (actEdge) { actEdge = false; if (P.shuvTo - P.shuv < 120) { P.shuvTo += 360; P.airShuv += 360; blip(600, 1200, 0.08, 0.04, 'triangle'); } }
   P.vy -= 15 * dt;
   P.x += P.ax * dt; P.z += P.az * dt; P.y += P.vy * dt;
   P.maxH = Math.max(P.maxH, P.y);
@@ -848,7 +884,9 @@ function land(g) {
   const names = ['AIR', 'AIR 180', 'AIR 360', 'BIG SPIN 540', 'AIR 720', 'AIR 900', 'AIR 1080'];
   let name = names[Math.min(halves, names.length - 1)];
   let pts = 180 + halves * 260 + Math.round((P.maxH - g.y) * 140), note = '';
-  if (P.grabT > 0.2) { name += ' ' + P.grab; pts += Math.round(P.grabT * 350); }
+  // the board snaps round to finish any shuv still turning when you land
+  if (P.airShuv) { P.shuv = P.shuvTo = Math.round(P.shuvTo / 180) * 180; const n = P.airShuv / 360; name += ' ' + (n === 1 ? '' : n === 2 ? 'DOUBLE ' : n === 3 ? 'TRIPLE ' : n + 'x ') + 'SHUV-IT'; pts += n * 300; }
+  if (P.grabT > 0.2) { name += ' ' + P.grab; pts += Math.round(P.grabT * (P.grab === 'METHOD' ? 520 : 350)); }
   if (P.grabbing) { note = 'SKETCHY'; pts = Math.round(pts * 0.5); P.v *= 0.7; }
   else if (Math.abs(a) < 15) { note = 'CLEAN'; pts = Math.round(pts * 1.25); }
   P.grabbing = false;
@@ -978,6 +1016,7 @@ function placeRider(dt) {
     if (P.mode === 'done' || P.v < 0.3) applyPose('idle', dt); else applyPose('run', dt, { phase: P.phase });
     return;
   }
+  boardG.rotation.y = P.shuv * Math.PI / 180;
   if (P.air) {
     orient(_fw, UPV, _q);
     _q2.setFromAxisAngle(UPV, -P.ang * Math.PI / 180); _q.premultiply(_q2);
@@ -988,9 +1027,9 @@ function placeRider(dt) {
   normalAt(pos.x, pos.z, _n);
   if (ground(pos.x, pos.z).kind !== 'sea') _n.set(0, 1, 0).lerp(_n, 0.3).normalize();
   orient(_fw, _n, _q);
-  _q2.setFromAxisAngle(_f, -P.lean * 0.3); _q.premultiply(_q2);
+  _q2.setFromAxisAngle(_f, -P.lean * (P.slashT > 0 ? 0.45 : 0.3)); _q.premultiply(_q2);
   rig.quaternion.slerp(_q, 1 - Math.exp(-dt * 14));
-  applyPose(P.low ? 'crouch' : 'stand', dt, { dir: 1, bob: Math.sin(T * 7) * 0.012 - Math.abs(P.lean) * 0.07 });
+  applyPose(P.low ? 'crouch' : 'stand', dt, { dir: 1, bob: Math.sin(T * 7) * 0.012 - Math.abs(P.lean) * 0.07 + (P.shuvCD > 0.75 ? Math.sin((1.1 - P.shuvCD) * 9) * 0.25 : 0) });
 }
 function placeCamera(dt) {
   let k = 4;
@@ -1035,7 +1074,7 @@ function updatePrompts() {
     return setPrompt('WAIT FOR A WAVE', 'watch the wash run up the sand');
   }
   if (P.mode === 'skim' && !P.air) {
-    if (P.skimDist < 12 && !waveUnder(P.x, P.z)) return setPrompt('SKIM OUT TO THE WAVE', 'LEFT / RIGHT steer · ride up the face and turn back for a WRAP · hit the lip fast to launch');
+    if (P.skimDist < 12 && !waveUnder(P.x, P.z)) return setPrompt('SKIM OUT TO THE WAVE', 'S slash · SPACE shuv-it · ride up the face and turn back for a WRAP · hit the lip fast to launch');
   }
   setPrompt('');
 }

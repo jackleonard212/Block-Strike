@@ -11,14 +11,16 @@ Two files:
 
 `surf.html` is a separate third-person 3D skimboarding game built with three.js (loaded from a CDN, so it needs internet). Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
 
-A session lasts three minutes and your best two runs count. Pick one of four beaches on the title screen: Sunset Beach, Glass Cove, Storm Shore or Moonlight Sands. Each has its own shorebreak size, speed and light.
+A session lasts three minutes and your best two runs count. Pick one of four beaches on the title screen: Sunset Beach, Glass Cove, Storm Shore or Moonlight Sands. Each has its own shorebreak size (up to nearly three metres at Storm Shore), speed and light.
 
 **A run**
 - You stand on the dry sand with your board under your arm while shorebreak waves dump close to the beach and send a sheet of water rushing up the sand.
 - When the bar fills, hold **Up** (or W) to sprint at the water. Holding Up also points you at the sea; **Left / Right** (A / D) steer.
 - The board drops itself as soon as your feet hit the wash. **Space** drops it sooner, but dry sand stops it dead.
-- Skim out to the incoming wave. **Left / Right** steer, **Up** pumps for speed, **Down** carves harder.
-- Ride up the wave face and turn back toward the beach for a **wrap**, or hit the lip fast to launch. In the air, **Left / Right** spin and **Up / Down** grab. A skimboard has no nose or tail, so any multiple of 180 lands; let go and the board squares up.
+- Skim out to the incoming wave. **Left / Right** steer and **Up** pumps for speed.
+- Press **S** (or Down) to **slash**: a hard snap turn that throws a wall of spray. Slashes on the wave face score more (wave slash, lip slash), and quick chains become double and triple slashes.
+- Press **Space** while skimming for a **shuv-it**: the board pops round 180 under your feet.
+- Ride up the wave face and turn back toward the beach for a **wrap**, or hit the lip fast to launch. In the air, **Left / Right** spin, **Space** shuvs the board round under you, and **Up / Down** grab (both together for a method). A skimboard has no nose or tail, so any multiple of 180 lands; let go and the board squares up. Tricks combine, like AIR 360 SHUV-IT INDY.
 - The run ends when you stop. Skim distance, wraps and airs all score, and tricks build a combo multiplier. Slow down out in deep water and you sink.
 - On phones, on-screen buttons appear at the bottom.
 
