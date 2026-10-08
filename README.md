@@ -7,23 +7,19 @@ Two files:
 - `index.html` is the whole game, one file you can paste into any editor. It loads three.js from a CDN, so it needs internet.
 - `server.js` is the optional multiplayer server. It has no dependencies, only Node 14 or newer.
 
-## Swell Rider (3D surfing)
+## Skim Rider (3D skimboarding)
 
-`surf.html` is a separate third-person 3D surfing game built with three.js (loaded from a CDN, so it needs internet). Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
+`surf.html` is a separate third-person 3D skimboarding game built with three.js (loaded from a CDN, so it needs internet). Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
 
-A heat lasts three minutes and, like a real contest, your best two waves count. Pick one of four breaks on the title screen: Sunset Point, Glass Reef, Storm Bay or Moonlight Bay. Each has its own wave size, speed and light.
+A session lasts three minutes and your best two runs count. Pick one of four beaches on the title screen: Sunset Beach, Glass Cove, Storm Shore or Moonlight Sands. Each has its own shorebreak size, speed and light.
 
-**Catching waves**
-- You sit in the lineup facing out to sea. Sets roll in from the horizon; the prompt counts down to the next wave and tells you where its peak is.
-- When the bar fills, hold **Up** (or W). Holding Up turns you to face the beach and paddles you in; keep holding until the wave picks you up. You stand up on your own (**Space** pops up sooner).
-- Start too late and the wave passes under you. If whitewater hits you, you are sent back out to the lineup. **Space** while lying on your board duck dives under whitewater.
-- **Left / Right** (or A / D) turn your board by hand.
-
-**Riding**
-- You ride away from the peak, ahead of the curl. Hands off, the board holds a line across the middle of the face. **Left / Right** carve up and down the face (the camera looks down the line, so the face is on one side of the screen). Dropping builds speed, climbing spends it.
-- **Up** pumps, **Down** stalls. Stall under the throwing lip to get barreled; pump out before it closes for a spit bonus.
-- Aim up at the lip with speed to launch. In the air, **Left / Right** spin and **Up / Down** grab; let go and the board squares up for the landing.
-- Snaps, carves and floaters score too, and tricks build a combo multiplier. A wipeout halves that wave's score; riding it to the end adds a completion bonus.
+**A run**
+- You stand on the dry sand with your board under your arm while shorebreak waves dump close to the beach and send a sheet of water rushing up the sand.
+- When the bar fills, hold **Up** (or W) to sprint at the water. Holding Up also points you at the sea; **Left / Right** (A / D) steer.
+- The board drops itself as soon as your feet hit the wash. **Space** drops it sooner, but dry sand stops it dead.
+- Skim out to the incoming wave. **Left / Right** steer, **Up** pumps for speed, **Down** carves harder.
+- Ride up the wave face and turn back toward the beach for a **wrap**, or hit the lip fast to launch. In the air, **Left / Right** spin and **Up / Down** grab. A skimboard has no nose or tail, so any multiple of 180 lands; let go and the board squares up.
+- The run ends when you stop. Skim distance, wraps and airs all score, and tricks build a combo multiplier. Slow down out in deep water and you sink.
 - On phones, on-screen buttons appear at the bottom.
 
 ## Play with friends (nothing to install)
