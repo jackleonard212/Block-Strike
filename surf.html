@@ -149,20 +149,21 @@ const sst = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * 
 const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // the beach runs along x; waves travel toward +z and start breaking at Z_BREAK, the lineup sits just outside it
-const Z_SPAWN = -75, Z_BREAK = 0, Z_SHORE = 70, Z_LINEUP = -16;
+const Z_SPAWN = -110, Z_BREAK = 0, Z_SHORE = 80;
+let Z_LINEUP = -18;                                   // set per spot: bigger waves, further out
 
 // ------------------------------------------------------------------ surf spots
 const SPOTS = [
-  { name: 'SUNSET POINT', sub: 'big, long, peeling walls', H: 4.6, c: 4.2, peel: 8.5, hollow: 1.3, chop: 0.12, spread: 55,
+  { name: 'SUNSET POINT', sub: '9 m peeling walls', H: 9, c: 5.6, peel: 13, hollow: 1.3, chop: 0.12, spread: 55,
     skyTop: '#2c2150', skyMid: '#b8607e', horizon: '#ffc493', sun: '#fff0c8', sunDir: [0.35, 0.12, -0.93],
     deep: '#16465e', shal: '#23798a', face: '#62c9b6', foam: '#ffffff', fog: '#e7a98c', hill: '#4b3a6c', sand: '#d9a873', light: '#ffd7b0', amb: '#7a5a92' },
-  { name: 'GLASS REEF', sub: 'giant glassy barrels', H: 5.6, c: 4.6, peel: 9.5, hollow: 1.05, chop: 0.05, spread: 50,
+  { name: 'GLASS REEF', sub: '11 m glassy barrels', H: 11, c: 6.0, peel: 15, hollow: 1.05, chop: 0.05, spread: 50,
     skyTop: '#2a6fc9', skyMid: '#7db8ea', horizon: '#d8eefa', sun: '#ffffff', sunDir: [-0.3, 0.7, -0.65],
     deep: '#0e7590', shal: '#1fb2c0', face: '#86f2e2', foam: '#ffffff', fog: '#cfe8f5', hill: '#2c8a66', sand: '#f1dfb0', light: '#ffffff', amb: '#8cc2e0' },
-  { name: 'STORM BAY', sub: 'monster storm swell', H: 7.5, c: 5.0, peel: 10, hollow: 1.25, chop: 0.3, spread: 65, rain: true, noSun: true,
+  { name: 'STORM BAY', sub: '16 m monster storm swell', H: 16, c: 6.8, peel: 17, hollow: 1.25, chop: 0.3, spread: 65, rain: true, noSun: true,
     skyTop: '#23282e', skyMid: '#3f474d', horizon: '#5d666a', sun: '#9aa4a8', sunDir: [0.2, 0.6, -0.75],
     deep: '#1a2e2d', shal: '#2a4b45', face: '#4f7f6f', foam: '#e6ece8', fog: '#4b5357', hill: '#20252a', sand: '#6f6a5e', light: '#c0c8cc', amb: '#4a5458' },
-  { name: 'MOONLIGHT BAY', sub: 'huge glassy night swell', H: 4.0, c: 4.0, peel: 8, hollow: 1.2, chop: 0.06, spread: 50, night: true,
+  { name: 'MOONLIGHT BAY', sub: '8 m glassy night swell', H: 8, c: 5.4, peel: 12, hollow: 1.2, chop: 0.06, spread: 50, night: true,
     skyTop: '#03051a', skyMid: '#0d1640', horizon: '#26346a', sun: '#e9e6ff', sunDir: [-0.4, 0.3, -0.87],
     deep: '#081a46', shal: '#16397a', face: '#3f8fd4', foam: '#8ff0ff', fog: '#151f48', hill: '#0b0e24', sand: '#3a3c5a', light: '#a9b4ff', amb: '#26306a' },
 ];
@@ -175,7 +176,7 @@ const MAXW = 4;
 const waves = [];
 let T = 0;            // water clock
 function deriveWave(w) {
-  const g = sst(Z_SPAWN, Z_BREAK, w.zc);
+  const g = sst(Z_LINEUP - 55, Z_LINEUP + 6, w.zc);         // swells stand up as they reach the lineup
   w.A = w.H * (0.3 + 0.7 * g) * (1 - sst(Z_SHORE, Z_SHORE + 18, w.zc));
   w.fk = lerp(3.2, spot.hollow, g);                     // front face width as a multiple of height
   w.e = w.tb >= 0 ? spot.peel * w.tb - 3 : -1e3;        // half-width of the broken section around the peak
@@ -187,7 +188,7 @@ function swellAt(x, z) {
 }
 function ampAt(w, x) { const ax = (x - w.xp) / w.spread; return w.A * (0.38 + 0.62 * Math.exp(-ax * ax)); }
 function profile(w, x, z) {
-  const d = z - w.zc, amp = ampAt(w, x), wf = Math.max(amp * w.fk, 0.01), wb = Math.max(amp * 7, 0.01);
+  const d = z - w.zc, amp = ampAt(w, x), wf = Math.max(amp * w.fk, 0.01), wb = Math.max(amp * 3.5, 0.01);
   let pf, pb;
   if (d > 0) { const t = clamp(1 - d / wf, 0, 1); pf = Math.pow(t, 1.7); const t2 = clamp(1 - d / (wf * 2.6), 0, 1); pb = t2 * t2 * 0.5; }
   else { const t = clamp(1 + d / wb, 0, 1); pf = t * t * (3 - 2 * t); pb = pf * 0.5; }
@@ -221,7 +222,7 @@ vec2 H(vec2 p){
     vec4 w=uW[i]; vec4 w2=uW2[i];
     if(w.y<0.01) continue;
     float d=p.y-w.x; float ax=(p.x-w.z)/w2.y; float amp=w.y*(0.38+0.62*exp(-ax*ax));
-    float wf=max(amp*w2.x,0.01), wb=max(amp*7.,0.01), pf, pb;
+    float wf=max(amp*w2.x,0.01), wb=max(amp*3.5,0.01), pf, pb;
     if(d>0.){float t=clamp(1.-d/wf,0.,1.);pf=pow(t,1.7);float t2=clamp(1.-d/(wf*2.6),0.,1.);pb=t2*t2*.5;}
     else{float t=clamp(1.+d/wb,0.,1.);pf=t*t*(3.-2.*t);pb=pf*.5;}
     float bx=abs(p.x-w.z)-w.w; float b=1.-sst(-3.,0.3,bx);
@@ -686,7 +687,7 @@ $('mute').onclick = () => { muted = !muted; $('mute').textContent = 'SOUND: ' + 
 
 // ------------------------------------------------------------------ spots
 function setSpot(i) {
-  spotI = i; spot = SPOTS[i];
+  spotI = i; spot = SPOTS[i]; Z_LINEUP = -(10 + spot.H * 0.9);
   uniforms.uDeep.value.set(spot.deep); uniforms.uShal.value.set(spot.shal); uniforms.uFaceC.value.set(spot.face); uniforms.uFoam.value.set(spot.foam);
   uniforms.uSky.value.set(spot.skyMid).lerp(new THREE.Color(spot.horizon), 0.5); uniforms.uSun.value.set(spot.noSun ? '#000000' : spot.sun);
   uniforms.uSunDir.value.set(...spot.sunDir).normalize(); uniforms.uFog.value.set(spot.fog); uniforms.uChop.value = spot.chop;
@@ -721,12 +722,15 @@ function newSurfer(x) {
 function spawnWave(xc) { if (waves.length < MAXW) waves.push({ zc: Z_SPAWN, H: spot.H * rnd(0.82, 1.15), xp: xc + rnd(-9, 9), tb: -1, brk: Z_BREAK + rnd(-3, 2), A: 0, fk: 3, e: -1e3, spread: 40, id: Math.random() }); }
 function updateSets(dt, xc) {
   G.nextSet -= dt;
-  if (G.nextSet <= 0 && !G.queue.length) {
-    const n = 2 + ((Math.random() * 2) | 0); let t = 0;
-    for (let i = 0; i < n; i++) { G.queue.push(t); t += rnd(10, 12.5); }
-    G.nextSet = t + rnd(8, 13);
-  }
-  for (let i = G.queue.length - 1; i >= 0; i--) { G.queue[i] -= dt; if (G.queue[i] <= 0 && waves.length < MAXW) { spawnWave(xc); G.queue.splice(i, 1); } }
+  if (G.nextSet <= 0 && waves.length < MAXW) { spawnWave(xc); G.nextSet = rnd(7, 9); }
+}
+// put a wave out at sea so its face reaches the lineup in about eta seconds
+function sendWave(xc, eta) {
+  if (waves.length >= MAXW) waves.sort((p, q) => p.zc - q.zc).shift();
+  spawnWave(xc);
+  const w = waves[waves.length - 1];
+  w.zc = Math.max(Z_SPAWN, Z_LINEUP - w.H * 1.5 - spot.c * eta); deriveWave(w);
+  G.nextSet = rnd(7, 9);
 }
 function updateWaves(dt) {
   for (const w of waves) {
@@ -809,7 +813,7 @@ function incoming() {
     if (w.A < 0.6) continue;
     const p = profile(w, P.x, P.z);
     const eta = (P.z - p.wf - w.zc) / spot.c;                 // when the front of the face reaches you
-    if (eta > -1.5 && eta < 10 && (!best || eta < best.eta)) best = { w, eta, p };
+    if (eta > -p.wf / spot.c && eta < 10 && (!best || eta < best.eta)) best = { w, eta, p };   // until its whole face has passed you
   }
   return best;
 }
@@ -818,12 +822,12 @@ function lineupUpdate(dt, k) {
   P.stS = lerp(P.stS || 0, st0, 1 - Math.exp(-dt * 10)); const st = st0;
   if (k.up || k.down) { P.sit = false; P.idle = 0; } else P.idle += dt;
   if (P.idle > 1.4 && !P.caught) P.sit = true;
-  P.yaw += P.stS * (P.sit ? 2.4 : 1.8) * dt;
+  P.yaw += P.stS * (P.sit ? 2.8 : 2.4) * dt;
   // holding UP with a wave on the way swings you round to face the beach for you
   const inc0 = incoming();
   if (k.up && !st && inc0 && inc0.eta < 6 && inc0.p.b < 0.5) {
     const dy = Math.atan2(Math.sin(-P.yaw), Math.cos(-P.yaw));
-    P.yaw += clamp(dy, -3 * dt, 3 * dt);
+    P.yaw += clamp(dy, -4.5 * dt, 4.5 * dt);
   }
   P.dive = Math.max(0, P.dive - dt); P.diveCD -= dt;
   const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
@@ -832,11 +836,11 @@ function lineupUpdate(dt, k) {
   // a board slides forward easily but resists going sideways; sitting up drags your legs
   const rx = P.vx, rz = P.vz - uz, fw = rx * fx + rz * fz;
   let lx = rx - fx * fw, lz = rz - fz * fw;
-  const fd = P.sit ? 2.2 : 0.75, ld = P.sit ? 2.2 : 3;
+  const fd = P.sit ? 2.2 : 0.7, ld = P.sit ? 2.2 : 3;
   const fw2 = fw * (1 - Math.min(1, fd * dt)); lx *= 1 - Math.min(1, ld * dt); lz *= 1 - Math.min(1, ld * dt);
   P.vx = fx * fw2 + lx; P.vz = uz + fz * fw2 + lz;
   P.fwd = fw2 * fz;                                             // your own paddling speed toward the beach
-  const slopeK = P.sit ? 1.2 : 2.8, thrust = k.up && P.dive <= 0 ? 2.1 : 0;
+  const slopeK = P.sit ? 1.2 : 2.8, thrust = k.up && P.dive <= 0 ? 2.1 * spot.c / 4 : 0;
   P.vx += (-slopeK * gx + thrust * fx) * dt; P.vz += (-slopeK * gz + thrust * fz) * dt;
   if (k.down) { P.vx *= 1 - 1.5 * dt; P.vz = uz + (P.vz - uz) * (1 - 1.5 * dt); }
   P.vz = Math.min(P.vz, spot.c * 1.15);                         // lying down you can't outrun the wave
@@ -847,7 +851,7 @@ function lineupUpdate(dt, k) {
   for (const w of waves) {
     if (w.A < 0.6) continue;
     const p = profile(w, P.x, P.z);
-    if (p.d > 0 && p.d < p.wf * 1.4 && Math.abs(P.x - w.xp) - w.e > 0.5 && w.fk < 2.3) onFace = { w, p };   // open face, not the broken part
+    if (p.d > 0 && p.d < p.wf * 1.4 && Math.abs(P.x - w.xp) - w.e > 0.5 && w.fk < 2.6) onFace = { w, p };   // open face, not the broken part
     // whitewater rolling over you
     if (p.b > 0.5 && p.d > -0.4 && p.d < p.wf * 1.7 && !fadeCb) {
       if (P.dive > 0) P.vz = Math.max(P.vz, 0.6);
@@ -864,7 +868,7 @@ function lineupUpdate(dt, k) {
     if (actEdge) { actEdge = false; return popUp(); }
     if (P.caught.t <= 0) return popUp();                          // you stand up on your own; SPACE just does it sooner
     if (!onFace || onFace.w !== P.caught.w) P.caught = null;
-  } else if (onFace && !P.sit && P.padRun > 0.35 && fz > 0.3 && P.vz > spot.c * 0.72) {
+  } else if (onFace && !P.sit && P.padRun > 0.3 && fz > 0.3 && P.vz > spot.c * 0.6) {
     P.caught = { w: onFace.w, t: 0.45 };
     blip(330, 660, 0.15, 0.06, 'triangle');
   }
@@ -908,7 +912,7 @@ function rideUpdate(dt, k) {
   const st = (k.right ? 1 : 0) - (k.left ? 1 : 0), upRaw = -st * P.dir;   // which screen side the face is on flips with direction
   P.upS = lerp(P.upS || 0, upRaw, 1 - Math.exp(-dt * 10));                   // steering eases in and out
   const up = Math.abs(P.upS) > 0.04 ? P.upS : 0;
-  const turn = 170 - clamp(P.s - 8, 0, 10) * 4;
+  const turn = 215 - clamp(P.s - 12, 0, 16) * 3;
   if (up) P.a += up * turn * dt;
   else {
     // hands off: the board settles into a line across the middle of the face
@@ -919,18 +923,18 @@ function rideUpdate(dt, k) {
   P.lean = lerp(P.lean, up, 1 - Math.exp(-dt * 6));
   const ar = P.a * Math.PI / 180, sa = Math.sin(ar), ca = Math.cos(ar);
   P.s -= 7.5 * sa * (0.35 + 0.65 * steep) * dt;                 // dropping speeds you up, climbing costs speed
-  P.s += 3.6 * steep * pow * dt;                                 // the breaking wave drives you along
-  if (k.up) P.s += (2.2 + 2.2 * steep * pow) * (sa < 0 ? 1.35 : 1) * dt;
+  P.s += 4.6 * steep * Math.min(pow, 1.2) * dt;                  // the breaking wave drives you along
+  if (k.up) P.s += (3 + 3 * steep) * (sa < 0 ? 1.35 : 1) * dt;
   if (k.down) P.s -= 6.8 * dt;
   if (dc < tl * 0.9) P.s += (dc < 1.5 ? 10 : 4) * dt;          // the foam ball shoves you forward, hard when it's right on you
-  P.s -= (P.s * 0.17 + (P.h < 0.1 ? 2.2 : 0)) * dt;
-  P.s = clamp(P.s, 5, 20);
-  P.h += P.s * sa / Lf * dt;
+  P.s -= (P.s * 0.12 + (P.h < 0.1 ? 1.5 : 0)) * dt;
+  P.s = clamp(P.s, 7, 32);
+  P.h += P.s * sa / (4 + Lf * 0.45) * dt;                       // big faces still feel quick to cross
   P.x += P.dir * P.s * ca * dt;
   P.low = k.up || k.down || P.tubeT > 0;
-  if (P.h <= 0) { P.h = 0; if (P.a < 0) { if (!P.bottom) P.s *= 1 - 0.18 * (-P.a / 65); P.a = 0; } P.bottom = true; } else if (P.h > 0.05) P.bottom = false;
+  if (P.h <= 0) { P.h = 0; if (P.a < 0) { if (!P.bottom) P.s *= 1 - 0.07 * (-P.a / 65); P.a = 0; } P.bottom = true; } else if (P.h > 0.05) P.bottom = false;
   if (P.h >= 1) {
-    if (P.s * sa > 5.8) return launch(sa, ca);
+    if (P.s * sa > 5.8 * Math.sqrt(spot.H / 3)) return launch(sa, ca);
     P.h = 1; P.a = Math.min(P.a, P.floatT > 0.9 ? -25 : 6);
   }
   if (dc < -1.2) return wipe('CAUGHT BY THE LIP');
@@ -1039,7 +1043,7 @@ function endRide() {
   const pts = Math.round(G.ride);
   G.rides.push({ pts });
   const n = G.rides.length, tricks = G.chain.length;
-  const hype = pts >= 20000 ? 'LEGENDARY!' : pts >= 10000 ? 'UNREAL!' : pts >= 5000 ? 'INSANE!' : pts >= 2500 ? 'SICK!' : pts >= 1200 ? 'NICE!' : '';
+  const hype = pts >= 40000 ? 'LEGENDARY!' : pts >= 22000 ? 'UNREAL!' : pts >= 10000 ? 'INSANE!' : pts >= 4000 ? 'SICK!' : pts >= 1500 ? 'NICE!' : '';
   if (hype) { popup(hype, null, 'hype'); blip(330, 990, 0.35, 0.08, 'sawtooth'); }
   setTimeout(() => { if (state === 'play') popup('WAVE ' + n, null, 'big', pts.toLocaleString('en-US') + ' points' + (tricks ? ` · ${tricks} tricks` : '')); }, hype ? 1000 : 0);
   G.ride = 0; G.mult = 1; G.chain = [];
@@ -1053,7 +1057,7 @@ function toLineup(msg) {
   fadeCb = () => {
     newSurfer((P && P.mode === 'lineup' ? P.x * 0.5 : 0) + rnd(-6, 6));
     // pull the next set forward if nothing is on its way
-    if (!incoming() && G.queue.length === 0) G.nextSet = Math.min(G.nextSet, rnd(1, 2.5));
+    const inc = incoming(); if (!inc || inc.eta > 3.8) sendWave(P.x, rnd(2.8, 3.3));
     $('fade').classList.remove('on');
     if (msg) setTimeout(() => popup(msg), 300);
     if (G.time <= 0) gameOver();
@@ -1065,8 +1069,8 @@ function start() {
   initAudio(); if (actx && actx.state === 'suspended') actx.resume();
   $('title').hidden = true; $('over').hidden = true; setPause(false);
   popsEl.innerHTML = '';
-  newGame(); waves.length = 0; G.nextSet = 2.5;
-  newSurfer(rnd(-4, 4));
+  newGame(); waves.length = 0;
+  newSurfer(rnd(-4, 4)); sendWave(P.x, 3.5);
   state = 'play'; actEdge = false;
   setTimeout(() => popup(spot.name, null, 'big', spot.sub), 200);
 }
@@ -1207,7 +1211,7 @@ function placeCamera(dt) {
       // down the line from the beach side, so the face stands up beside you; pulled back further on bigger waves
       const dir = P.dir, a = P.w ? ampAt(P.w, P.x) : spot.H, lead = clamp(P.s || 0, 0, 20) * 0.25;
       const tube = P.tubeT > 0.2;
-      _t.set(p.x - dir * (tube ? 4.5 : 6 + a * 0.55), Math.max(p.y, 0) + (tube ? 1.4 : 2.2 + a * 0.3), p.z + (tube ? 2 : 3 + a * 0.45));
+      _t.set(p.x - dir * (tube ? 4.5 : 6 + a * 0.32), Math.max(p.y, 0) + (tube ? 1.4 : 2.2 + a * 0.2), p.z + (tube ? 2 : 3 + a * 0.28));
       _l.set(p.x + dir * (7 + lead), p.y + 0.4, p.z - 1.2 - a * 0.1);
       k = tube ? 6 : 4.5;
     } else {
@@ -1243,11 +1247,11 @@ function updatePrompts() {
     if (P.caught) return setPrompt('GOT IT!', 'standing up · SPACE to pop up now', true);
     const inc = incoming();
     if (inc && inc.p.b > 0.5 && inc.eta < 2.5) return setPrompt('WHITEWATER', 'SPACE to duck dive under it', inc.eta < 1);
-    if (inc && inc.eta < 7 && inc.eta > -0.5 && inc.p.b < 0.5) {
+    if (inc && inc.eta < 7 && inc.p.b < 0.5) {
       const facing = Math.cos(P.yaw) > 0.5, side = inc.w.xp - P.x;
       const peak = Math.abs(side) < 4 ? 'the peak is right here' : `the peak is ${Math.round(Math.abs(side))}m to your ${(side > 0) === facing ? 'left' : 'right'}`;
       if (inc.eta > 2.5) return setPrompt(facing ? 'GET READY' : 'WAVE COMING', 'hold UP when the bar fills · ' + peak, false, 1 - clamp((inc.eta - 2.5) / 4.5, 0, 1));
-      return setPrompt(keys.up ? 'PADDLE! KEEP HOLDING UP' : 'HOLD UP TO PADDLE IN', facing ? peak : 'holding UP turns you to the beach', true, clamp(inc.eta / 2.5, 0, 1));
+      return setPrompt(keys.up ? 'PADDLE! KEEP HOLDING UP' : 'HOLD UP TO PADDLE IN', inc.eta < 0 ? 'it\'s lifting you, keep paddling' : facing ? peak : 'holding UP turns you to the beach', true, clamp(inc.eta / 2.5, 0, 1));
     }
     if (G.time <= 0) return setPrompt('HEAT OVER');
     return setPrompt(Math.cos(P.yaw) > 0.5 ? 'WAITING FOR A SET' : 'WATCHING FOR A SET', 'sets roll in from the horizon');

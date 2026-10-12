@@ -11,10 +11,10 @@ Two files:
 
 `surf.html` is a separate third-person 3D big-wave surfing game built with three.js (loaded from a CDN, so it needs internet). Open it in any browser; it needs no install. With the server running, it is at `http://<server-ip>:3000/surf.html`.
 
-A heat lasts three minutes and, like a real contest, your best two waves count. Pick one of four big-wave breaks on the title screen: Sunset Point (about 4.5 m), Glass Reef (about 5.5 m, hollow), Storm Bay (about 7.5 m) or Moonlight Bay (about 4 m). Each has its own speed and light.
+A heat lasts three minutes and, like a real contest, your best two waves count. Pick one of four big-wave breaks on the title screen: Sunset Point (about 9 m), Glass Reef (about 11 m, hollow), Storm Bay (about 16 m) or Moonlight Bay (about 8 m). Each has its own speed and light. Waves roll in steadily rather than in sets with long lulls, and after every ride a fresh wave is already on its way to the lineup.
 
 **Catching waves**
-- You sit in the lineup facing out to sea. Sets roll in from the horizon; the prompt counts down to the next wave and tells you where its peak is.
+- You sit in the lineup facing out to sea. Waves roll in from the horizon; the prompt counts down to the next one and tells you where its peak is.
 - When the bar fills, hold **Up** (or W). Holding Up turns you to face the beach and paddles you in; keep holding until the wave picks you up. You stand up on your own (**Space** pops up sooner).
 - Start too late and the wave passes under you. If whitewater hits you, you are sent back out to the lineup. **Space** while lying on your board duck dives under whitewater.
 - **Left / Right** (or A / D) turn your board by hand.
